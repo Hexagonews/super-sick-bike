@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Super Sick Bike Fundraiser</title>
+    <!-- Use Tailwind CSS for rapid, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use the Inter font for a clean, modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main container for the GoFundMe-like page -->
+    <div class="bg-white rounded-xl shadow-2xl overflow-hidden max-w-2xl w-full p-8 space-y-8">
+
+        <!-- User ID display for reference -->
+        <div class="text-xs text-gray-400 text-right">User ID: <span id="user-id">Loading...</span></div>
+
+        <!-- Campaign Header -->
+        <div class="text-center space-y-4">
+            <h1 class="text-4xl font-bold text-gray-800">Help Fund The Super Sick Bike!</h1>
+        </div>
+
+        <!-- Campaign Image -->
+        <div class="rounded-lg overflow-hidden shadow-lg">
+            <!-- User-provided image for the "sick bike" -->
+            <img src="https://i.imgur.com/clsLfk1.png" alt="The Super Sick Bike" class="w-full h-auto object-cover">
+        </div>
+
+        <!-- Donation Progress Section -->
+        <div class="space-y-4">
+            <div class="flex justify-between items-center text-lg font-semibold text-gray-700">
+                <span id="current-amount">$0</span>
+                <span id="goal-amount">goal of $5,000</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progress-bar" class="bg-yellow-500 h-3 rounded-full transition-all duration-500 ease-in-out" style="width: 0%;"></div>
+            </div>
+
+            <div class="text-sm text-gray-500">
+                <span id="total-donations">0</span> donations
+            </div>
+        </div>
+
+        <!-- Campaign Story Section -->
+        <div class="space-y-4">
+            <h2 class="text-2xl font-semibold text-gray-800">Our Mission</h2>
+            <p class="text-gray-600 leading-relaxed">
+                Our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. The Super Sick Bike is just our prototype for a wider project. Our next step is to get similar bikes around the Metro area.
+            </p>
+            <p class="text-gray-600 leading-relaxed">
+                Eventually, we want to make private transportation available across the country. We will have the bikes stationed around Australia, so you can just hop on and get to your destination easily, without having to pay.
+            </p>
+        </div>
+
+        <!-- Donation Form -->
+        <div class="bg-gray-100 p-6 rounded-lg shadow-inner space-y-4">
+            <h3 class="text-xl font-semibold text-gray-800">Make a Donation</h3>
+            <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <label for="donation-amount" class="sr-only">Donation Amount</label>
+                <input type="number" id="donation-amount" min="1" placeholder="Enter amount..." class="flex-1 w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors">
+                <button id="donate-button" class="w-full sm:w-auto px-6 py-3 bg-yellow-500 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition-colors transform hover:scale-105">
+                    Donate
+                </button>
+            </div>
+            <div id="message-box" class="text-sm font-medium text-center text-gray-700 mt-2 min-h-[1.5rem]"></div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // Import necessary Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by the canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth;
+        const GOAL_AMOUNT = 5000;
+
+        // Function to update the UI with current data
+        const updateUI = (currentAmount, totalDonations) => {
+            const currentAmountEl = document.getElementById('current-amount');
+            const goalAmountEl = document.getElementById('goal-amount');
+            const progressBarEl = document.getElementById('progress-bar');
+            const totalDonationsEl = document.getElementById('total-donations');
+            
+            currentAmountEl.textContent = `$${currentAmount.toLocaleString()}`;
+            goalAmountEl.textContent = `goal of $${GOAL_AMOUNT.toLocaleString()}`;
+            const progressPercentage = Math.min((currentAmount / GOAL_AMOUNT) * 100, 100);
+            progressBarEl.style.width = `${progressPercentage}%`;
+            totalDonationsEl.textContent = totalDonations;
+        };
+        
+        // Wait for the window to load before starting
+        window.onload = async function() {
+            if (!firebaseConfig) {
+                console.error("Firebase config is not available.");
+                document.getElementById('message-box').textContent = "Error: Firebase configuration is missing.";
+                return;
+            }
+
+            // Initialize Firebase app and services
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // Get references to DOM elements
+            const donationAmountInput = document.getElementById('donation-amount');
+            const donateButton = document.getElementById('donate-button');
+            const messageBoxEl = document.getElementById('message-box');
+
+            // Authentication state change listener
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    const userId = user.uid;
+                    document.getElementById('user-id').textContent = userId;
+
+                    // Now that we have a userId, we can set up the database listener and donation logic
+                    const userDocRef = doc(db, "artifacts", appId, "users", userId, "donation-data", "summary");
+
+                    // Set up a real-time listener for the document
+                    onSnapshot(userDocRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            updateUI(data.currentAmount || 0, data.totalDonations || 0);
+                        } else {
+                            // Document doesn't exist, initialize with a loading state
+                            updateUI(0, 0);
+                            // Create the initial document if it's the first time
+                            try {
+                                setDoc(userDocRef, { currentAmount: 0, totalDonations: 0 });
+                            } catch (e) {
+                                console.error("Error creating initial document:", e);
+                            }
+                        }
+                    }, (error) => {
+                        console.error("Error listening to document:", error);
+                        messageBoxEl.textContent = "Error: Could not load data.";
+                    });
+
+                    // Function to handle the donation
+                    const handleDonate = async () => {
+                        const donationAmount = parseFloat(donationAmountInput.value);
+
+                        if (isNaN(donationAmount) || donationAmount <= 0) {
+                            messageBoxEl.textContent = 'Please enter a valid amount.';
+                            return;
+                        }
+
+                        messageBoxEl.textContent = 'Donating...';
+                        
+                        try {
+                            const docSnap = await getDoc(userDocRef);
+                            if (docSnap.exists()) {
+                                const currentData = docSnap.data();
+                                const newAmount = (currentData.currentAmount || 0) + donationAmount;
+                                const newDonations = (currentData.totalDonations || 0) + 1;
+                                await setDoc(userDocRef, {
+                                    currentAmount: newAmount,
+                                    totalDonations: newDonations
+                                });
+                                messageBoxEl.textContent = `Thanks for your donation of $${donationAmount.toLocaleString()}!`;
+                            } else {
+                                await setDoc(userDocRef, {
+                                    currentAmount: donationAmount,
+                                    totalDonations: 1
+                                });
+                                messageBoxEl.textContent = `Thanks for your donation of $${donationAmount.toLocaleString()}!`;
+                            }
+                            
+                            donationAmountInput.value = '';
+                        } catch (e) {
+                            console.error("Error adding donation: ", e);
+                            messageBoxEl.textContent = "Error: Donation failed. Please try again.";
+                        }
+                    };
+
+                    donateButton.addEventListener('click', handleDonate);
+                    donationAmountInput.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter') {
+                            handleDonate();
+                        }
+                    });
+                } else {
+                    // Sign in with the custom token or anonymously if not available
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Firebase authentication failed:", error);
+                        messageBoxEl.textContent = "Error: Authentication failed. Data may not be saved.";
+                    }
+                }
+            });
+
+            // Initial UI update for loading state
+            updateUI(0, 0);
+        };
+    </script>
+</body>
+</html>
