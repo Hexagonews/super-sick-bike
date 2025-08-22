@@ -81,14 +81,18 @@
 
     <script type="module">
         // Import necessary Firebase functions
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-        // Global variables provided by the canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const firebaseConfig = {
+          apiKey: "AIzaSyCPDey68EN2kuPEwcIb4x5ldl3hM9ig__w",
+          authDomain: "super-sick-bike-fundraiser.firebaseapp.com",
+          projectId: "super-sick-bike-fundraiser",
+          storageBucket: "super-sick-bike-fundraiser.firebasestorage.app",
+          messagingSenderId: "17825933291",
+          appId: "1:17825933291:web:310e9a43f0a313a15bdbae"
+        };
 
         let db, auth;
         const GOAL_AMOUNT = 5000;
@@ -109,8 +113,8 @@
         
         // Wait for the window to load before starting
         window.onload = async function() {
-            if (!firebaseConfig) {
-                console.error("Firebase config is not available.");
+            if (!firebaseConfig.apiKey) {
+                console.error("Firebase config is missing. Please paste your config in the script.js file.");
                 document.getElementById('message-box').textContent = "Error: Firebase configuration is missing.";
                 return;
             }
@@ -125,14 +129,22 @@
             const donateButton = document.getElementById('donate-button');
             const messageBoxEl = document.getElementById('message-box');
 
-            // Authentication state change listener
+            // Sign in anonymously to enable database access
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Firebase authentication failed:", error);
+                messageBoxEl.textContent = "Error: Authentication failed. Data may not be saved.";
+                return;
+            }
+
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     const userId = user.uid;
                     document.getElementById('user-id').textContent = userId;
 
                     // Now that we have a userId, we can set up the database listener and donation logic
-                    const userDocRef = doc(db, "artifacts", appId, "users", userId, "donation-data", "summary");
+                    const userDocRef = doc(db, "donations", "summary");
 
                     // Set up a real-time listener for the document
                     onSnapshot(userDocRef, (docSnap) => {
@@ -197,18 +209,6 @@
                             handleDonate();
                         }
                     });
-                } else {
-                    // Sign in with the custom token or anonymously if not available
-                    try {
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (error) {
-                        console.error("Firebase authentication failed:", error);
-                        messageBoxEl.textContent = "Error: Authentication failed. Data may not be saved.";
-                    }
                 }
             });
 
@@ -218,3 +218,4 @@
     </script>
 </body>
 </html>
+
