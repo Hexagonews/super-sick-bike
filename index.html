@@ -29,7 +29,7 @@
 
         <!-- Campaign Image -->
         <div class="rounded-lg overflow-hidden shadow-lg">
-            <!-- Updated image from the user's URL -->
+            <!-- Updated image URL from the user's provided link -->
             <img src="https://i.imgur.com/clsLfk1.png" alt="The Super Sick Bike" class="w-full h-auto object-cover">
         </div>
 
@@ -76,83 +76,127 @@
 
     </div>
 
-    <script>
-        // Use an IIFE (Immediately Invoked Function Expression) to avoid polluting the global namespace.
-        (function() {
-            // Get references to all necessary DOM elements
-            const currentAmountEl = document.getElementById('current-amount');
-            const goalAmountEl = document.getElementById('goal-amount');
-            const progressBarEl = document.getElementById('progress-bar');
-            const totalDonationsEl = document.getElementById('total-donations');
-            const donationAmountInput = document.getElementById('donation-amount');
-            const donateButton = document.getElementById('donate-button');
-            const messageBoxEl = document.getElementById('message-box');
+    <!-- Firebase Scripts -->
+    <script type="module">
+        // Global variables provided by the canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-            // Set the campaign goals and initial state
-            const GOAL_AMOUNT = 5000;
-            const MAX_DONATION = 100; // Define the maximum donation amount
-            let currentAmount = 0;
-            let totalDonations = 0;
+        // Import Firebase functions from the SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-            // Function to update the UI with current data
-            const updateUI = () => {
-                // Format the amount as currency
-                currentAmountEl.textContent = `$${currentAmount.toLocaleString()}`;
-                goalAmountEl.textContent = `goal of $${GOAL_AMOUNT.toLocaleString()}`;
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-                // Calculate the percentage and update the progress bar width
-                const progressPercentage = Math.min((currentAmount / GOAL_AMOUNT) * 100, 100);
-                progressBarEl.style.width = `${progressPercentage}%`;
-                
-                // Update the total number of donations
-                totalDonationsEl.textContent = totalDonations;
-            };
+        // Get references to all necessary DOM elements
+        const currentAmountEl = document.getElementById('current-amount');
+        const goalAmountEl = document.getElementById('goal-amount');
+        const progressBarEl = document.getElementById('progress-bar');
+        const totalDonationsEl = document.getElementById('total-donations');
+        const donationAmountInput = document.getElementById('donation-amount');
+        const donateButton = document.getElementById('donate-button');
+        const messageBoxEl = document.getElementById('message-box');
 
-            // Function to handle the donation
-            const handleDonate = () => {
-                const donationAmount = parseFloat(donationAmountInput.value);
+        // Set the campaign goals and constants
+        const GOAL_AMOUNT = 5000;
+        const MAX_DONATION = 100;
 
-                // Check for donation limit
-                if (donationAmount > MAX_DONATION) {
-                    messageBoxEl.textContent = 'The donation cannot exceed $100';
-                    return; // Stop execution
+        // Document path in Firestore.
+        const donationsRef = doc(db, `/artifacts/${appId}/public/data/donations-data/main-donations`);
+
+        // Asynchronously sign in and then set up the listener
+        const initialize = async () => {
+            try {
+                // Sign in with the custom token if available, otherwise sign in anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
                 }
 
-                // Basic validation: ensure the input is a positive number
-                if (isNaN(donationAmount) || donationAmount <= 0) {
-                    messageBoxEl.textContent = 'Please enter a valid amount.';
-                    return; // Exit the function
-                }
+                // Initial data for the document if it doesn't exist
+                const initialData = { currentAmount: 0, totalDonations: 0 };
+                await setDoc(donationsRef, initialData, { merge: true });
 
-                // Add the donation to the totals
-                currentAmount += donationAmount;
-                totalDonations++;
+                // Set up a real-time listener to update the UI
+                onSnapshot(donationsRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const currentAmount = data.currentAmount || 0;
+                        const totalDonations = data.totalDonations || 0;
+                        updateUI(currentAmount, totalDonations);
+                    } else {
+                        // Document does not exist, initialize it
+                        setDoc(donationsRef, initialData);
+                    }
+                }, (error) => {
+                    console.error("Error listening to document:", error);
+                    messageBoxEl.textContent = "Error: Could not load donation data.";
+                });
 
-                // Update the user interface
-                updateUI();
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+                messageBoxEl.textContent = "Error: Failed to connect to the database.";
+            }
+        };
 
-                // Display a success message
+        // Function to update the UI with current data from Firestore
+        const updateUI = (currentAmount, totalDonations) => {
+            currentAmountEl.textContent = `$${currentAmount.toLocaleString()}`;
+            goalAmountEl.textContent = `goal of $${GOAL_AMOUNT.toLocaleString()}`;
+            const progressPercentage = Math.min((currentAmount / GOAL_AMOUNT) * 100, 100);
+            progressBarEl.style.width = `${progressPercentage}%`;
+            totalDonationsEl.textContent = totalDonations;
+        };
+
+        // Function to handle the donation
+        const handleDonate = async () => {
+            const donationAmount = parseFloat(donationAmountInput.value);
+
+            // Check for donation limit
+            if (donationAmount > MAX_DONATION) {
+                messageBoxEl.textContent = `The donation cannot exceed $${MAX_DONATION}.`;
+                return;
+            }
+
+            // Basic validation
+            if (isNaN(donationAmount) || donationAmount <= 0) {
+                messageBoxEl.textContent = 'Please enter a valid amount.';
+                return;
+            }
+
+            // Update the data in Firestore
+            try {
+                await updateDoc(donationsRef, {
+                    currentAmount: increment(donationAmount),
+                    totalDonations: increment(1)
+                });
                 messageBoxEl.textContent = `Thanks for your donation of $${donationAmount.toLocaleString()}!`;
-                
-                // Clear the input field for the next donation
                 donationAmountInput.value = '';
-            };
+            } catch (error) {
+                console.error("Error updating document:", error);
+                messageBoxEl.textContent = "Error: Failed to process donation.";
+            }
+        };
 
-            // Attach the click event listener to the donate button
-            donateButton.addEventListener('click', handleDonate);
+        // Attach the click event listener to the donate button
+        donateButton.addEventListener('click', handleDonate);
 
-            // Also allow donations by pressing Enter in the input field
-            donationAmountInput.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') {
-                    handleDonate();
-                }
-            });
+        // Also allow donations by pressing Enter in the input field
+        donationAmountInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                handleDonate();
+            }
+        });
 
-            // Initialize the UI on page load
-            updateUI();
-        })();
+        // Start the application
+        initialize();
     </script>
-
 </body>
 </html>
 
