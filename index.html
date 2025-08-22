@@ -10,10 +10,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Confetti library for the "thank you" animation -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
+        }
+        /* Custom animation for the button pop */
+        .donate-pop {
+            animation: pop 0.2s ease-in-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -175,6 +186,12 @@
                             return;
                         }
 
+                        // Add a pop animation to the button
+                        donateButton.classList.add('donate-pop');
+                        setTimeout(() => {
+                            donateButton.classList.remove('donate-pop');
+                        }, 200);
+
                         messageBoxEl.textContent = 'Donating...';
                         
                         try {
@@ -188,6 +205,14 @@
                                     totalDonations: newDonations
                                 });
                                 messageBoxEl.textContent = `Thanks for your donation of $${donationAmount.toLocaleString()}!`;
+
+                                // Trigger confetti after successful donation
+                                confetti({
+                                    particleCount: 150,
+                                    spread: 70,
+                                    origin: { y: 0.6 }
+                                });
+
                             } else {
                                 await setDoc(userDocRef, {
                                     currentAmount: donationAmount,
@@ -218,4 +243,3 @@
     </script>
 </body>
 </html>
-
