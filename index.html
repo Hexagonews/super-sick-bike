@@ -10,67 +10,58 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Confetti library for the "thank you" animation -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
         }
-        /* Custom CSS for modal backdrop */
-        .modal-backdrop {
-            background-color: rgba(0, 0, 0, 0.5);
+        /* Custom animation for the button pop */
+        .donate-pop {
+            animation: pop 0.2s ease-in-out;
         }
-        /* Custom CSS for badge gradients and animations */
-        .badge-base {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px; /* Equivalent of tailwind space-x-2 */
-            padding: 4px 12px; /* Equivalent of tailwind px-3 py-1 */
-            border-radius: 9999px; /* Equivalent of tailwind rounded-full */
-            font-size: 0.875rem; /* Equivalent of tailwind text-sm */
-            font-weight: 600; /* Equivalent of tailwind font-semibold */
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            transition: transform 0.2s ease-in-out;
-            cursor: pointer;
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
-
-        .badge-base:hover {
-            transform: translateY(-2px);
+        /* Lock icon SVG */
+        .badge-lock {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            opacity: 0.9;
+            pointer-events: none;
+            color: #4b5563; /* Tailwind gray-600 */
         }
-
-        .badge-seedling {
-            background: linear-gradient(135deg, #22C55E, #84cc16); /* green-500 to lime-500 */
-            color: #1f2937; /* gray-800 */
+        /* Custom styles for the badges to give them a more pronounced 3D/shadow effect */
+        .badge-unlocked {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        .badge-bronze {
-            background: linear-gradient(135deg, #CD7F32, #A86018); /* custom bronze */
-            color: #1f2937;
+        .badge-unlocked:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
         }
-        .badge-silver {
-            background: linear-gradient(135deg, #C0C0C0, #A9A9A9); /* custom silver */
-            color: #1f2937;
-        }
-        .badge-golden {
-            background: linear-gradient(135deg, #FFD700, #F5B800); /* gold */
-            color: #1f2937;
-        }
-        .badge-hero {
-            background: linear-gradient(135deg, #F9A8D4, #F472B6); /* pink */
-            color: #1f2937;
+        /* Glassmorphism effect for locked badges */
+        .badge-locked {
+            filter: grayscale(100%) blur(1px);
+            opacity: 0.7;
+            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
         }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4 relative space-y-8">
 
-    <!-- Settings Icon -->
-    <button id="settings-button" class="absolute top-4 right-4 p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors z-20">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-    </button>
-    
     <!-- Main container for the GoFundMe-like page -->
-    <div class="bg-white rounded-xl shadow-2xl overflow-hidden max-w-2xl w-full p-8 space-y-8 z-10">
+    <div class="bg-white rounded-xl shadow-2xl overflow-hidden max-w-2xl w-full p-8 space-y-8">
+
+        <!-- User ID display for reference -->
+        <div class="text-xs text-gray-400 text-right">User ID: <span id="user-id">Loading...</span></div>
 
         <!-- Campaign Header -->
         <div class="text-center space-y-4">
@@ -79,7 +70,7 @@
 
         <!-- Campaign Image -->
         <div class="rounded-lg overflow-hidden shadow-lg">
-            <!-- Updated image URL from the user's provided link -->
+            <!-- User-provided image for the "sick bike" -->
             <img src="https://i.imgur.com/clsLfk1.png" alt="The Super Sick Bike" class="w-full h-auto object-cover">
         </div>
 
@@ -98,22 +89,21 @@
             <div class="text-sm text-gray-500">
                 <span id="total-donations">0</span> donations
             </div>
-            
-            <!-- Badges Section - NEW -->
-            <div id="badge-container" class="flex justify-center items-center h-16">
-                <!-- Badges will be dynamically added here -->
-            </div>
         </div>
 
         <!-- Campaign Story Section -->
         <div class="space-y-4">
             <h2 class="text-2xl font-semibold text-gray-800">Our Mission</h2>
-            <p class="text-gray-600 leading-relaxed">
-                Our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. The Super Sick Bike is just our prototype for a wider project. Our next step is to get similar bikes around the Metro area.
-            </p>
-            <p class="text-gray-600 leading-relaxed">
+            <p id="story-text" class="text-gray-600 leading-relaxed">
+                We are Jake, Elliot, and Brody, and our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. The Super Sick Bike is just our prototype for a wider project. Our next step is to get similar bikes around the Metro area.
                 Eventually, we want to make private transportation available across the country. We will have the bikes stationed around Australia, so you can just hop on and get to your destination easily, without having to pay.
             </p>
+        </div>
+        
+        <!-- New: Gemini-powered Thank You Message Section -->
+        <div id="thank-you-section" class="bg-gray-100 p-6 rounded-lg shadow-inner space-y-4 hidden">
+            <h3 class="text-xl font-semibold text-gray-800">A special thank you to you!</h3>
+            <div id="thank-you-message" class="text-gray-600 leading-relaxed italic text-center"></div>
         </div>
 
         <!-- Donation Form -->
@@ -128,364 +118,450 @@
             </div>
             <div id="message-box" class="text-sm font-medium text-center text-gray-700 mt-2 min-h-[1.5rem]"></div>
         </div>
-
     </div>
 
-    <!-- Password Modal -->
-    <div id="password-modal" class="hidden fixed inset-0 flex items-center justify-center p-4 modal-backdrop z-50">
-        <div class="bg-white rounded-xl shadow-2xl p-8 space-y-6 w-full max-w-sm">
-            <h2 class="text-2xl font-bold text-gray-800 text-center">Enter Password</h2>
-            <div class="space-y-4">
-                <label for="password-input" class="sr-only">Password</label>
-                <input type="password" id="password-input" placeholder="Password" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
-            </div>
-            <button id="password-enter-button" class="w-full px-6 py-3 bg-yellow-500 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition-colors transform hover:scale-105">
-                Enter
+    <!-- New: Badge Tiers Section -->
+    <div id="badge-tiers-section" class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-8 space-y-6">
+        <h2 class="text-2xl font-semibold text-gray-800">Badge Tiers</h2>
+        <div id="badge-tiers-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <!-- Badges will be dynamically inserted here -->
+        </div>
+        <p id="my-donated-amount" class="text-lg font-medium text-center text-gray-600 mt-4">
+            You've donated: <span id="total-donated-user" class="font-bold text-gray-800">$0</span>
+        </p>
+    </div>
+
+    <!-- Password modal (hidden by default) -->
+    <div id="password-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <!-- Themed password box -->
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-80 space-y-4">
+            <h4 class="text-xl font-semibold text-gray-800 text-center">Enter Password</h4>
+            <!-- Themed input field -->
+            <input type="password" id="password-input" placeholder="Password" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors text-gray-800">
+            <!-- Themed submit button -->
+            <button id="password-submit" class="w-full py-3 bg-yellow-500 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition-colors">
+                Submit
             </button>
-            <button id="password-close-button" class="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                Cancel
+            <!-- Themed exit button -->
+            <button id="password-exit-btn" class="w-full py-3 bg-gray-300 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-gray-400 transition-colors">
+                Exit
             </button>
-            <div id="password-message-box" class="text-sm font-medium text-center text-red-500 mt-2 min-h-[1.5rem]"></div>
+            <div id="password-message" class="text-sm text-center text-red-500 min-h-[1.5rem]"></div>
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="hidden fixed inset-0 flex items-center justify-center p-4 modal-backdrop z-50">
-        <div class="bg-white rounded-xl shadow-2xl p-8 space-y-6 w-full max-w-md">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-gray-800">Campaign Settings</h2>
-                <button id="close-settings-button" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <label for="goal-input" class="block text-sm font-medium text-gray-700 mb-2">Donation Goal</label>
-                    <input type="number" id="goal-input" min="1" placeholder="e.g., 10000" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                </div>
-                <div>
-                    <label for="current-amount-input" class="block text-sm font-medium text-gray-700 mb-2">Current Amount</label>
-                    <input type="number" id="current-amount-input" min="0" placeholder="e.g., 500" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                </div>
-                <div>
-                    <label for="max-donation-input" class="block text-sm font-medium text-gray-700 mb-2">Max Donation Limit</label>
-                    <input type="number" id="max-donation-input" min="1" placeholder="e.g., 100" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                </div>
-            </div>
-
-            <button id="save-settings-button" class="w-full px-6 py-3 bg-yellow-500 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition-colors transform hover:scale-105">
-                Save Settings
-            </button>
-            <div id="settings-message-box" class="text-sm font-medium text-center text-gray-700 mt-2 min-h-[1.5rem]"></div>
+    <!-- Developer Controls Panel (hidden by default) -->
+    <!-- Themed dev panel -->
+    <div id="dev-panel" class="fixed bottom-4 right-4 w-96 bg-white rounded-xl shadow-2xl p-8 space-y-4 hidden z-50 text-gray-800">
+        <h4 class="text-lg font-semibold border-b border-gray-300 pb-2">Developer Controls</h4>
+        <div class="space-y-2">
+            <label for="dev-target" class="block text-sm text-gray-600">Change Goal ($):</label>
+            <!-- Themed input field -->
+            <input type="number" id="dev-target" placeholder="New Goal" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors text-gray-800">
+            <!-- Themed button -->
+            <button id="dev-set-target" class="w-full py-3 bg-purple-500 text-white font-bold rounded-lg shadow-lg hover:bg-purple-600 transition-colors">Set Goal</button>
         </div>
+        <div class="space-y-2">
+            <label for="dev-amount" class="block text-sm text-gray-600">Change Amount ($):</label>
+            <!-- Themed input field -->
+            <input type="number" id="dev-amount" placeholder="New Amount" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors text-gray-800">
+            <!-- Themed button -->
+            <button id="dev-set-amount" class="w-full py-3 bg-purple-500 text-white font-bold rounded-lg shadow-lg hover:bg-purple-600 transition-colors">Set Amount</button>
+        </div>
+        <!-- NEW: Max Donation Amount Control -->
+        <div class="space-y-2">
+            <label for="dev-max-donation" class="block text-sm text-gray-600">Change Max Donation ($):</label>
+            <input type="number" id="dev-max-donation" placeholder="New Max Amount" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors text-gray-800">
+            <button id="dev-set-max-donation" class="w-full py-3 bg-purple-500 text-white font-bold rounded-lg shadow-lg hover:bg-purple-600 transition-colors">Set Max</button>
+        </div>
+        <!-- Themed button -->
+        <button id="dev-reset" class="w-full py-3 bg-red-600 text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-colors">Reset Everything</button>
     </div>
 
+    <!-- Developer Icon to toggle the panel -->
+    <button id="dev-toggle" class="fixed bottom-4 left-4 text-3xl text-gray-800 opacity-20 hover:opacity-100 transition-opacity z-50">
+        ⚙️
+    </button>
 
-    <!-- Firebase Scripts -->
     <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Import necessary Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-        // IMPORTANT: Use the global variables provided by the Canvas environment.
-        // DO NOT use a hardcoded Firebase configuration.
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Firebase configuration and other constants
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
+        const DEFAULT_GOAL = 5000;
+        const DEFAULT_MAX_DONATION_AMOUNT = 100;
+        const PASSWORD = 'InTheShadow';
+        let db, auth, userId;
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // An array of all badge tiers with their required donation amounts and styles
+        const BADGE_TIERS = [
+            { name: "Puddle Jumper", icon: "💧", amount: 0, classes: "text-gray-800 bg-gradient-to-br from-gray-200 to-gray-400" },
+            { name: "Chain Link", icon: "🔗", amount: 10, classes: "text-gray-800 bg-gradient-to-br from-blue-300 to-blue-500" },
+            { name: "Spoke Spinner", icon: "🛠️", amount: 20, classes: "text-gray-800 bg-gradient-to-br from-orange-300 to-orange-500" },
+            { name: "Gear Grinder", icon: "⚙️", amount: 50, classes: "text-gray-800 bg-gradient-to-br from-sky-300 to-sky-500" },
+            { name: "Trailblazer", icon: "🏆", amount: 100, classes: "text-white bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg" },
+            { name: "Road Warrior", icon: "🚴‍♂️", amount: 200, classes: "text-white bg-gradient-to-br from-stone-400 to-stone-600 shadow-lg" },
+            { name: "Bike Lord", icon: "👑", amount: 500, classes: "text-white bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg" },
+        ];
 
-        // A simple way to get a unique user ID for anonymous sessions.
-        let userId;
-
-        // Get references to all necessary DOM elements
-        const currentAmountEl = document.getElementById('current-amount');
-        const goalAmountEl = document.getElementById('goal-amount');
-        const progressBarEl = document.getElementById('progress-bar');
-        const totalDonationsEl = document.getElementById('total-donations');
-        const donationAmountInput = document.getElementById('donation-amount');
-        const donateButton = document.getElementById('donate-button');
-        const messageBoxEl = document.getElementById('message-box');
-        
-        // Elements for the password modal
-        const passwordModal = document.getElementById('password-modal');
-        const passwordInput = document.getElementById('password-input');
-        const passwordEnterButton = document.getElementById('password-enter-button');
-        const passwordCloseButton = document.getElementById('password-close-button');
-        const passwordMessageBox = document.getElementById('password-message-box');
-        
-        // Elements for the settings modal
-        const settingsButton = document.getElementById('settings-button');
-        const settingsModal = document.getElementById('settings-modal');
-        const closeSettingsButton = document.getElementById('close-settings-button');
-        const goalInput = document.getElementById('goal-input');
-        const currentAmountInput = document.getElementById('current-amount-input');
-        const maxDonationInput = document.getElementById('max-donation-input');
-        const saveSettingsButton = document.getElementById('save-settings-button');
-        const settingsMessageBox = document.getElementById('settings-message-box');
-
-        // Badge container element
-        const badgeContainerEl = document.getElementById('badge-container');
-
-        // Let variables for dynamic campaign constants
-        let GOAL_AMOUNT;
-        let MAX_DONATION;
-        
-        const SETTINGS_PASSWORD = 'InTheShadow';
-        // Document path for public campaign data
-        const publicDonationsRef = doc(db, `/artifacts/${appId}/public/data/donations-data/main-donations`);
-
-        // Function to update the badges based on an amount
-        const updateBadges = (amount) => {
-            let badgeHtml = '';
+        // Function to update the UI with current data
+        const updateUI = (currentAmount, totalDonations, goalAmount) => {
+            const currentAmountEl = document.getElementById('current-amount');
+            const goalAmountEl = document.getElementById('goal-amount');
+            const progressBarEl = document.getElementById('progress-bar');
+            const totalDonationsEl = document.getElementById('total-donations');
             
-            // Generate the correct badge based on the amount
-            if (amount >= 2500) {
-                // Golden Giver Badge
-                badgeHtml = `<div class="badge-base badge-golden">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                                    <path fill-rule="evenodd" d="M10.788 3.21c.439-1.077 1.902-1.077 2.34 0a1.5 1.5 0 01.768.18l2.96-.983a1.5 1.5 0 011.85 1.85l-.983 2.961a1.5 1.5 0 01.18.769c1.078.439 1.078 1.902 0 2.34a1.5 1.5 0 01-.18.768l.983 2.96c.394 1.187-.827 2.39-2.014 2.014l-2.96-.983a1.5 1.5 0 01-.768.18c-1.077.439-1.077 1.902 0 2.34a1.5 1.5 0 01.18.768l-.983 2.961c-.394 1.187-1.597 1.39-2.014 1.39V21a1.5 1.5 0 01-2.014-2.014l-.983-2.96a1.5 1.5 0 01-.768-.18c-1.077-.439-1.077-1.902 0-2.34a1.5 1.5 0 01.18-.768l-.983-2.96c-.394-1.187.827-2.39 2.014-2.014l2.96.983a1.5 1.5 0 01.768-.18z" clip-rule="evenodd" />
-                                </svg>
-                                <span>Golden Giver</span>
-                            </div>`;
-            } else if (amount >= 1000) {
-                // Silver Sponsor Badge
-                badgeHtml = `<div class="badge-base badge-silver">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                                    <path fill-rule="evenodd" d="M12 2.25a.75.75 0 01.75.75v.258a3 3 0 00-.735 0L12 3.25V3a.75.75 0 01.75-.75zM11.25 7.5a.75.75 0 000 1.5h1.5a.75.75 0 000-1.5h-1.5zM9.603 16.28a.75.75 0 00-.457-1.12l-.934-.356A3 3 0 004.817 14.5l-.337.094a.75.75 0 00-.414.922l.531 1.062a.75.75 0 00.922.414l.094-.033a3 3 0 00.584.062l.356-.093a.75.75 0 00.414-.922zM12 2.25a.75.75 0 01.75.75v.258a3 3 0 00-.735 0L12 3.25V3a.75.75 0 01.75-.75zM11.25 7.5a.75.75 0 000 1.5h1.5a.75.75 0 000-1.5h-1.5zM9.603 16.28a.75.75 0 00-.457-1.12l-.934-.356A3 3 0 004.817 14.5l-.337.094a.75.75 0 00-.414.922l.531 1.062a.75.75 0 00.922.414l.094-.033a3 3 0 00.584.062l.356-.093a.75.75 0 00.414-.922zM15.397 16.28a.75.75 0 00-.414.922l.53 1.062a.75.75 0 00.922.414l.095-.034a3 3 0 00.584.062l.356-.093a.75.75 0 00.414-.922l-.53-1.062a.75.75 0 00-.922-.414l-.094.033a3 3 0 00-.584-.062l-.356.093zM12 18.75a.75.75 0 00-.75.75v.258c0 .241.018.481.053.719L11.25 21a.75.75 0 001.5 0l-.053-.719c.035-.238.053-.478.053-.719v-.258a.75.75 0 00-.75-.75zM6.75 20.25a.75.75 0 01-.75-.75V19.5a3 3 0 00-.785-2.028l-.133-.166a.75.75 0 01.996-1.196l.166.133c.277.22.56.438.85.654A.75.75 0 017 17.585v.165a.75.75 0 01-.25.565.75.75 0 01-.5.185zM18.75 20.25a.75.75 0 01-.5-.185.75.75 0 01-.25-.565v-.165a.75.75 0 01.277-.577c.29-.216.573-.434.85-.654l.166-.133a.75.75 0 01.996 1.196l-.133.166A3 3 0 0019.5 19.5v.75a.75.75 0 01-.75.75zM12.75 3a.75.75 0 01.75.75v.258a3 3 0 00-.735 0L12 3.25V3a.75.75 0 01.75-.75zM15.397 16.28a.75.75 0 00-.414.922l.53 1.062a.75.75 0 00.922.414l.095-.034a3 3 0 00.584.062l.356-.093a.75.75 0 00.414-.922l-.53-1.062a.75.75 0 00-.922-.414l-.094.033a3 3 0 00-.584-.062l-.356.093zM12 18.75a.75.75 0 00-.75.75v.258c0 .241.018.481.053.719L11.25 21a.75.75 0 001.5 0l-.053-.719c.035-.238.053-.478.053-.719v-.258a.75.75 0 00-.75-.75zM6.75 20.25a.75.75 0 01-.75-.75V19.5a3 3 0 00-.785-2.028l-.133-.166a.75.75 0 01.996-1.196l.166.133c.277.22.56.438.85.654A.75.75 0 017 17.585v.165a.75.75 0 01-.25.565.75.75 0 01-.5.185zM18.75 20.25a.75.75 0 01-.5-.185.75.75 0 01-.25-.565v-.165a.75.75 0 01.277-.577c.29-.216.573-.434.85-.654l.166-.133a.75.75 0 01.996 1.196l-.133.166A3 3 0 0019.5 19.5v.75a.75.75 0 01-.75.75z" clip-rule="evenodd" />
-                                </svg>
-                                <span>Silver Sponsor</span>
-                            </div>`;
-            } else if (amount >= 100) {
-                // Bronze Donor Badge
-                badgeHtml = `<div class="badge-base badge-bronze">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                                    <path fill-rule="evenodd" d="M12 14.25a.75.75 0 00-.75.75v3.635a.75.75 0 001.5 0V15a.75.75 0 00-.75-.75zM5.318 16.923a.75.75 0 00-.472 1.256l.824.789a.75.75 0 001.256-.472l-.824-.79a.75.75 0 00-.534-.983zM18.84 17.309a.75.75 0 00-1.256-.472l-.824.789a.75.75 0 00.472 1.256l.824-.789a.75.75 0 00.784-.784zM7.701 4.793a.75.75 0 00-1.04-.216L4.17 5.922a.75.75 0 00.216 1.04l2.491-1.144a.75.75 0 00-.177-1.025zM19.829 5.922a.75.75 0 00.216-1.04l-2.491-1.144a.75.75 0 00-1.04.216l2.491 1.144zM12.75 3a.75.75 0 00-1.5 0v.27a.75.75 0 001.5 0V3zM3 13.5a.75.75 0 000 1.5h.375a.75.75 0 000-1.5H3zM20.625 15a.75.75 0 000-1.5h-.375a.75.75 0 000 1.5h.375zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" clip-rule="evenodd" />
-                                </svg>
-                                <span>Bronze Donor</span>
-                            </div>`;
-            } else if (amount >= 50) {
-                // Seedling Supporter Badge
-                badgeHtml = `<div class="badge-base badge-seedling">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                                    <path d="M7.5 18.75a.75.75 0 000 1.5h9a.75.75 0 000-1.5h-9zM6 16.5a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h12a.75.75 0 00.75-.75v-1.5a.75.75 0 00-.75-.75H6z" />
-                                    <path fill-rule="evenodd" d="M12 3.75a.75.75 0 01.75.75v3.815a1.5 1.5 0 00.866 1.342l1.378.89a.75.75 0 01-.866 1.29l-1.378-.89a3 3 0 01-1.732 0l-1.378.89a.75.75 0 01-.866-1.29l1.378-.89a1.5 1.5 0 00.866-1.342V4.5a.75.75 0 01.75-.75z" clip-rule="evenodd" />
-                                </svg>
-                                <span>Seedling Supporter</span>
-                             </div>`;
-            } else {
-                badgeHtml = ''; // No badge if amount is too low
-            }
-            
-            badgeContainerEl.innerHTML = badgeHtml;
-        };
-
-        // Function to update the public UI with current data from Firestore
-        const updatePublicUI = (currentAmount, totalDonations, goalAmount) => {
             currentAmountEl.textContent = `$${currentAmount.toLocaleString()}`;
             goalAmountEl.textContent = `goal of $${goalAmount.toLocaleString()}`;
             const progressPercentage = Math.min((currentAmount / goalAmount) * 100, 100);
             progressBarEl.style.width = `${progressPercentage}%`;
             totalDonationsEl.textContent = totalDonations;
         };
-        
-        // Function to handle the donation
-        const handleDonate = async () => {
-            const donationAmount = parseFloat(donationAmountInput.value);
 
-            // Check for donation limit
-            if (donationAmount > MAX_DONATION) {
-                messageBoxEl.textContent = `The donation cannot exceed $${MAX_DONATION}.`;
-                return;
-            }
+        // Function to render all badge tiers based on the user's total donation amount
+        const renderBadges = (totalDonated) => {
+            const container = document.getElementById('badge-tiers-container');
+            container.innerHTML = ''; // Clear previous badges
 
-            // Basic validation
-            if (isNaN(donationAmount) || donationAmount <= 0) {
-                messageBoxEl.textContent = 'Please enter a valid amount.';
-                return;
-            }
+            BADGE_TIERS.forEach(badge => {
+                const isUnlocked = totalDonated >= badge.amount;
+                const badgeElement = document.createElement('div');
+                badgeElement.className = `relative flex flex-col items-center justify-center p-4 rounded-xl text-center transition-all duration-300 transform border-2 border-gray-200`;
 
-            // Update the data in Firestore
+                if (isUnlocked) {
+                    badgeElement.innerHTML = `
+                        <span class="text-3xl">${badge.icon}</span>
+                        <span class="font-bold text-lg mt-2">${badge.name}</span>
+                        <p class="text-sm text-gray-600 mt-1">$${badge.amount}</p>
+                    `;
+                    // Fix: Use the spread operator to add multiple classes from the string
+                    badgeElement.classList.add('badge-unlocked', ...badge.classes.split(' '));
+                } else {
+                    badgeElement.innerHTML = `
+                        <span class="text-3xl">${badge.icon}</span>
+                        <span class="font-bold text-lg mt-2">${badge.name}</span>
+                        <p class="text-sm text-gray-400 mt-1">
+                            Locked until $${badge.amount}
+                        </p>
+                        <svg class="badge-lock" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clip-rule="evenodd" />
+                        </svg>
+                    `;
+                    badgeElement.classList.add('badge-locked', 'bg-gray-100');
+                }
+                container.appendChild(badgeElement);
+            });
+        };
+
+        // Function to handle the text generation API call
+        const handleGenerateThanks = async () => {
+            const thankYouMessageEl = document.getElementById('thank-you-message');
+            thankYouMessageEl.textContent = 'Generating your personalized message...';
+            
+            const prompt = "Write a short, fun, and heartfelt thank you message for someone who just donated to a bike fundraiser. Make it sound like it's from a person who loves bikes.";
+            
+            const payload = { 
+                contents: [{
+                    parts: [{ text: prompt }]
+                }]
+            };
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
             try {
-                // Update the public campaign total
-                await updateDoc(publicDonationsRef, {
-                    currentAmount: increment(donationAmount),
-                    totalDonations: increment(1)
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
 
-                // Update the user's personal donation total
-                const personalDonationsRef = doc(db, `/artifacts/${appId}/users/${userId}/personal-donations/my-donation-data`);
-                await updateDoc(personalDonationsRef, {
-                    myTotalDonated: increment(donationAmount)
-                });
-
-                messageBoxEl.textContent = `Thanks for your donation of $${donationAmount.toLocaleString()}!`;
-                donationAmountInput.value = '';
-            } catch (error) {
-                console.error("Error updating document:", error);
-                messageBoxEl.textContent = "Error: Failed to process donation.";
+                const result = await response.json();
+                const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (generatedText) {
+                    thankYouMessageEl.textContent = generatedText;
+                } else {
+                    thankYouMessageEl.textContent = 'Sorry, could not generate a message right now. Please try again!';
+                }
+            } catch (e) {
+                console.error("Error generating text:", e);
+                thankYouMessageEl.textContent = `Error: ${e.message}`;
             }
         };
 
-        // Function to handle saving settings
-        const handleSaveSettings = async () => {
-            const newGoal = parseFloat(goalInput.value);
-            const newCurrentAmount = parseFloat(currentAmountInput.value);
-            const newMaxDonation = parseFloat(maxDonationInput.value);
-
-            // Validation for new goal
-            if (isNaN(newGoal) || newGoal <= 0) {
-                settingsMessageBox.textContent = 'Please enter a valid goal amount.';
+        // Wait for the window to load before starting
+        window.onload = async function() {
+            if (!firebaseConfig.apiKey) {
+                console.error("Firebase config is missing.");
+                document.getElementById('message-box').textContent = "Error: Firebase configuration is missing.";
                 return;
             }
 
-            // Validation for new current amount
-            if (isNaN(newCurrentAmount) || newCurrentAmount < 0) {
-                settingsMessageBox.textContent = 'Please enter a valid current amount.';
-                return;
-            }
+            // Initialize Firebase app and services
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
 
-            // Validation for max donation limit
-            if (isNaN(newMaxDonation) || newMaxDonation < 1) {
-                settingsMessageBox.textContent = 'Please enter a valid maximum donation limit.';
-                return;
-            }
+            // Get references to DOM elements
+            const thankYouSection = document.getElementById('thank-you-section');
+            const donationAmountInput = document.getElementById('donation-amount');
+            const donateButton = document.getElementById('donate-button');
+            const messageBoxEl = document.getElementById('message-box');
+            const totalDonatedUserEl = document.getElementById('total-donated-user');
 
-            settingsMessageBox.textContent = 'Saving...';
-            try {
-                await setDoc(publicDonationsRef, {
-                    goalAmount: newGoal,
-                    currentAmount: newCurrentAmount,
-                    maxDonation: newMaxDonation
-                }, { merge: true });
-                settingsMessageBox.textContent = 'Settings saved successfully!';
-                settingsModal.classList.add('hidden'); // Close modal on success
-                // Clear inputs and message after successful save
-                goalInput.value = '';
-                currentAmountInput.value = '';
-                maxDonationInput.value = '';
-                settingsMessageBox.textContent = '';
-            } catch (error) {
-                console.error("Error saving settings:", error);
-                settingsMessageBox.textContent = "Error: Failed to save settings.";
-            }
-        };
-        
-        // Function to handle password validation
-        const handlePasswordCheck = () => {
-            if (passwordInput.value === SETTINGS_PASSWORD) {
+            // Get references to dev controls and password modal
+            const devToggle = document.getElementById('dev-toggle');
+            const devPanel = document.getElementById('dev-panel');
+            const passwordModal = document.getElementById('password-modal');
+            const passwordInput = document.getElementById('password-input');
+            const passwordSubmitBtn = document.getElementById('password-submit');
+            const passwordExitBtn = document.getElementById('password-exit-btn');
+            const passwordMessageEl = document.getElementById('password-message');
+            const devTargetInput = document.getElementById('dev-target');
+            const devSetTargetBtn = document.getElementById('dev-set-target');
+            const devAmountInput = document.getElementById('dev-amount');
+            const devSetAmountBtn = document.getElementById('dev-set-amount');
+            const devResetBtn = document.getElementById('dev-reset');
+            const devMaxDonationInput = document.getElementById('dev-max-donation');
+            const devSetMaxDonationBtn = document.getElementById('dev-set-max-donation');
+
+            // Toggle dev panel visibility with a single click.
+            devToggle.addEventListener('click', () => {
+                if (!devPanel.classList.contains('hidden')) {
+                    devPanel.classList.add('hidden');
+                } else {
+                    passwordModal.classList.remove('hidden');
+                    passwordInput.value = '';
+                    passwordMessageEl.textContent = '';
+                    passwordInput.focus();
+                }
+            });
+
+            // Handle password submission
+            const handlePasswordSubmit = () => {
+                if (passwordInput.value === PASSWORD) {
+                    passwordModal.classList.add('hidden');
+                    devPanel.classList.remove('hidden');
+                } else {
+                    passwordMessageEl.textContent = 'Incorrect password.';
+                }
+            };
+            passwordSubmitBtn.addEventListener('click', handlePasswordSubmit);
+            passwordInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    handlePasswordSubmit();
+                }
+            });
+
+            // Handle the exit button for the password modal
+            passwordExitBtn.addEventListener('click', () => {
                 passwordModal.classList.add('hidden');
-                settingsModal.classList.remove('hidden');
-                passwordMessageBox.textContent = ''; // Clear message on success
-                passwordInput.value = ''; // Clear password input
-            } else {
-                passwordMessageBox.textContent = 'Incorrect password. Please try again.';
-            }
-        };
-        
-        // Asynchronously sign in and then set up the listener
-        const initialize = async () => {
+            });
+
+            // Authenticate the user
             try {
-                // Sign in using the custom token provided by the environment
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
-
-                // Now that we are authenticated, set up the listeners
-                // and get the user ID from the authentication state.
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-
-                        // Document path for user's personal donation data
-                        const personalDonationsRef = doc(db, `/artifacts/${appId}/users/${userId}/personal-donations/my-donation-data`);
-                        
-                        // Initial data for public campaign document if it doesn't exist
-                        const publicInitialData = { currentAmount: 0, totalDonations: 0, goalAmount: 5000, maxDonation: 100 };
-                        await setDoc(publicDonationsRef, publicInitialData, { merge: true });
-
-                        // Initial data for personal document if it doesn't exist
-                        const personalInitialData = { myTotalDonated: 0 };
-                        await setDoc(personalDonationsRef, personalInitialData, { merge: true });
-
-                        // Set up a real-time listener for public data
-                        onSnapshot(publicDonationsRef, (docSnap) => {
-                            if (docSnap.exists()) {
-                                const data = docSnap.data();
-                                const currentAmount = data.currentAmount || 0;
-                                const totalDonations = data.totalDonations || 0;
-                                GOAL_AMOUNT = data.goalAmount || 5000;
-                                MAX_DONATION = data.maxDonation || 100;
-                                updatePublicUI(currentAmount, totalDonations, GOAL_AMOUNT);
-                            } else {
-                                setDoc(publicDonationsRef, publicInitialData);
-                            }
-                        }, (error) => {
-                            console.error("Error listening to public document:", error);
-                        });
-
-                        // Set up a real-time listener for personal data
-                        onSnapshot(personalDonationsRef, (docSnap) => {
-                            if (docSnap.exists()) {
-                                const data = docSnap.data();
-                                const myTotalDonated = data.myTotalDonated || 0;
-                                updateBadges(myTotalDonated);
-                            } else {
-                                setDoc(personalDonationsRef, personalInitialData);
-                            }
-                        }, (error) => {
-                            console.error("Error listening to personal document:", error);
-                        });
-                    } else {
-                        console.log("No user is signed in.");
-                    }
-                });
             } catch (error) {
-                console.error("Firebase initialization or authentication failed:", error);
-                messageBoxEl.textContent = "Error: Failed to connect to the database. Please check your Firebase config and security rules.";
+                console.error("Firebase authentication failed:", error);
+                messageBoxEl.textContent = "Error: Authentication failed. Data may not be saved.";
+                return;
             }
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    document.getElementById('user-id').textContent = userId;
+
+                    // Document reference for main fundraiser data
+                    const mainDocRef = doc(db, `artifacts/${appId}/public/data/donations`, "summary");
+                    
+                    // Document reference for the current user's personal donation summary
+                    const userSummaryDocRef = doc(db, `artifacts/${appId}/users/${userId}/summary`, "donations");
+
+                    // Set up a real-time listener for the main document
+                    onSnapshot(mainDocRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            updateUI(
+                                data.currentAmount || 0,
+                                data.totalDonations || 0,
+                                data.goalAmount || DEFAULT_GOAL
+                            );
+                            devTargetInput.value = data.goalAmount || DEFAULT_GOAL;
+                            devAmountInput.value = data.currentAmount || 0;
+                            devMaxDonationInput.value = data.maxDonationAmount || DEFAULT_MAX_DONATION_AMOUNT;
+                        } else {
+                            updateUI(0, 0, DEFAULT_GOAL);
+                            try {
+                                setDoc(mainDocRef, { 
+                                    currentAmount: 0, 
+                                    totalDonations: 0,
+                                    goalAmount: DEFAULT_GOAL,
+                                    maxDonationAmount: DEFAULT_MAX_DONATION_AMOUNT
+                                });
+                            } catch (e) {
+                                console.error("Error creating initial document:", e);
+                            }
+                        }
+                    }, (error) => {
+                        console.error("Error listening to main document:", error);
+                        messageBoxEl.textContent = "Error: Could not load data.";
+                    });
+
+                    // Set up a real-time listener for the user's donation summary
+                    onSnapshot(userSummaryDocRef, (docSnap) => {
+                        const totalDonated = docSnap.exists() ? docSnap.data().totalDonated : 0;
+                        totalDonatedUserEl.textContent = `$${totalDonated.toLocaleString()}`;
+                        renderBadges(totalDonated);
+                    }, (error) => {
+                        console.error("Error listening to user summary:", error);
+                    });
+
+                    // Function to handle the donation
+                    const handleDonate = async () => {
+                        const donationAmount = parseFloat(donationAmountInput.value);
+
+                        const mainDocSnap = await getDoc(mainDocRef);
+                        const mainData = mainDocSnap.data();
+                        const maxDonationAmount = mainData.maxDonationAmount || DEFAULT_MAX_DONATION_AMOUNT;
+
+                        if (isNaN(donationAmount) || donationAmount <= 0) {
+                            messageBoxEl.textContent = 'Please enter a valid amount.';
+                            return;
+                        }
+
+                        if (donationAmount > maxDonationAmount) {
+                            messageBoxEl.textContent = `Donation amount cannot exceed $${maxDonationAmount}.`;
+                            return;
+                        }
+
+                        donateButton.classList.add('donate-pop');
+                        setTimeout(() => {
+                            donateButton.classList.remove('donate-pop');
+                        }, 200);
+
+                        messageBoxEl.textContent = 'Donating...';
+                        
+                        try {
+                            // Update the main public fundraiser document
+                            const newAmount = (mainData.currentAmount || 0) + donationAmount;
+                            const newDonations = (mainData.totalDonations || 0) + 1;
+                            await setDoc(mainDocRef, {
+                                currentAmount: newAmount,
+                                totalDonations: newDonations,
+                            }, { merge: true });
+
+                            // Update the user's personal donation summary document
+                            const userSummaryDocSnap = await getDoc(userSummaryDocRef);
+                            const userSummaryData = userSummaryDocSnap.data() || {}; // Fixed: Handle case where document doesn't exist
+                            const newTotalDonated = (userSummaryData.totalDonated || 0) + donationAmount;
+                            
+                            await setDoc(userSummaryDocRef, {
+                                totalDonated: newTotalDonated,
+                                lastDonationTimestamp: Date.now()
+                            }, { merge: true });
+
+                            messageBoxEl.textContent = `Thanks for your donation of $${donationAmount.toLocaleString()}!`;
+                            
+                            thankYouSection.classList.remove('hidden');
+
+                            confetti({
+                                particleCount: 150,
+                                spread: 70,
+                                origin: { y: 0.6 }
+                            });
+
+                            handleGenerateThanks();
+                            
+                            donationAmountInput.value = '';
+                        } catch (e) {
+                            console.error("Error adding donation: ", e);
+                            messageBoxEl.textContent = "Error: Donation failed. Please try again.";
+                        }
+                    };
+
+                    donateButton.addEventListener('click', handleDonate);
+                    donationAmountInput.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter') {
+                            handleDonate();
+                        }
+                    });
+
+                    // --- Developer Controls Logic ---
+                    devSetTargetBtn.addEventListener('click', async () => {
+                        const newGoal = parseFloat(devTargetInput.value);
+                        if (isNaN(newGoal) || newGoal <= 0) {
+                            messageBoxEl.textContent = 'Please enter a valid goal amount.';
+                            return;
+                        }
+                        try {
+                            await setDoc(mainDocRef, { goalAmount: newGoal }, { merge: true });
+                            messageBoxEl.textContent = `Goal successfully updated to $${newGoal.toLocaleString()}`;
+                        } catch (e) {
+                            console.error("Error setting new goal:", e);
+                            messageBoxEl.textContent = "Error setting new goal. Please try again.";
+                        }
+                    });
+
+                    devSetAmountBtn.addEventListener('click', async () => {
+                        const newAmount = parseFloat(devAmountInput.value);
+                        if (isNaN(newAmount) || newAmount < 0) {
+                            messageBoxEl.textContent = 'Please enter a valid amount.';
+                            return;
+                        }
+                        try {
+                            await setDoc(mainDocRef, { currentAmount: newAmount, totalDonations: 0 }, { merge: true });
+                            messageBoxEl.textContent = `Donation amount successfully updated to $${newAmount.toLocaleString()}`;
+                        } catch (e) {
+                            console.error("Error setting new amount:", e);
+                            messageBoxEl.textContent = "Error setting new amount. Please try again.";
+                        }
+                    });
+
+                    devSetMaxDonationBtn.addEventListener('click', async () => {
+                        const newMaxDonation = parseFloat(devMaxDonationInput.value);
+                        if (isNaN(newMaxDonation) || newMaxDonation < 0) {
+                            messageBoxEl.textContent = 'Please enter a valid maximum amount.';
+                            return;
+                        }
+                        try {
+                            await setDoc(mainDocRef, { maxDonationAmount: newMaxDonation }, { merge: true });
+                            messageBoxEl.textContent = `Maximum donation amount successfully updated to $${newMaxDonation.toLocaleString()}`;
+                        } catch (e) {
+                            console.error("Error setting new max donation:", e);
+                            messageBoxEl.textContent = "Error setting new max donation. Please try again.";
+                        }
+                    });
+
+                    devResetBtn.addEventListener('click', async () => {
+                        try {
+                            await setDoc(mainDocRef, { currentAmount: 0, totalDonations: 0 }, { merge: true });
+                            // Also reset user's personal data
+                            await setDoc(userSummaryDocRef, { totalDonated: 0 }, { merge: true });
+                            messageBoxEl.textContent = "All data has been reset.";
+                        } catch (e) {
+                            console.error("Error resetting data:", e);
+                            messageBoxEl.textContent = "Error resetting data. Please try again.";
+                        }
+                    });
+                }
+            });
+            // Initial render of badges
+            renderBadges(0);
         };
-
-        // Event listeners for the donation button
-        donateButton.addEventListener('click', handleDonate);
-        donationAmountInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                handleDonate();
-            }
-        });
-
-        // Event listeners for the settings modals
-        settingsButton.addEventListener('click', () => {
-            passwordModal.classList.remove('hidden');
-        });
-        passwordEnterButton.addEventListener('click', handlePasswordCheck);
-        passwordInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                handlePasswordCheck();
-            }
-        });
-        passwordCloseButton.addEventListener('click', () => {
-            passwordModal.classList.add('hidden');
-            passwordInput.value = '';
-            passwordMessageBox.textContent = '';
-        });
-        closeSettingsButton.addEventListener('click', () => {
-            settingsModal.classList.add('hidden');
-            settingsMessageBox.textContent = '';
-        });
-        saveSettingsButton.addEventListener('click', handleSaveSettings);
-
-        // Start the application
-        initialize();
     </script>
 </body>
 </html>
