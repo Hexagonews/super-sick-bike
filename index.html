@@ -186,20 +186,29 @@
 
     <!-- Firebase Scripts -->
     <script type="module">
-        // Global variables provided by the canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Import Firebase functions from the SDK
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyASQMgjJl2k4kLVZN_0cn8q1TRD7RmHjP8",
+            authDomain: "supersickbike.firebaseapp.com",
+            projectId: "supersickbike",
+            storageBucket: "supersickbike.firebasestorage.app",
+            messagingSenderId: "659436765201",
+            appId: "1:659436765201:web:f518de4363193bf4a1f1b0",
+            measurementId: "G-01RH6YHV8D"
+        };
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // A simple way to get a unique user ID for anonymous sessions.
+        let userId;
 
         // Get references to all necessary DOM elements
         const currentAmountEl = document.getElementById('current-amount');
@@ -233,12 +242,13 @@
         // Let variables for dynamic campaign constants
         let GOAL_AMOUNT;
         let MAX_DONATION;
-        let userId;
         
         const SETTINGS_PASSWORD = 'InTheShadow';
-        
+        // Use a hardcoded ID since we are not using __app_id
+        const APP_ID = 'super-sick-bike-app'; 
+
         // Document path for public campaign data
-        const publicDonationsRef = doc(db, `/artifacts/${appId}/public/data/donations-data/main-donations`);
+        const publicDonationsRef = doc(db, `/artifacts/${APP_ID}/public/data/donations-data/main-donations`);
 
         // Function to update the badges based on an amount
         const updateBadges = (amount) => {
@@ -254,14 +264,6 @@
                                 <span>Golden Giver</span>
                             </div>`;
             } else if (amount >= 1000) {
-                // Silver Sponsor Badge
-                badgeHtml = `<div class="badge-base badge-silver">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                                    <path fill-rule="evenodd" d="M12 2.25a.75.75 0 01.75.75v.258a3 3 0 00-.735 0L12 3.25V3a.75.75 0 01.75-.75zM11.25 7.5a.75.75 0 000 1.5h1.5a.75.75 0 000-1.5h-1.5zM9.603 16.28a.75.75 0 00-.457-1.12l-.934-.356A3 3 0 004.817 14.5l-.337.094a.75.75 0 00-.414.922l.531 1.062a.75.75 0 00.922.414l.094-.033a3 3 0 00.584.062l.356-.093a.75.75 0 00.414-.922zM12 2.25a.75.75 0 01.75.75v.258a3 3 0 00-.735 0L12 3.25V3a.75.75 0 01.75-.75zM11.25 7.5a.75.75 0 000 1.5h1.5a.75.75 0 000-1.5h-1.5zM9.603 16.28a.75.75 0 00-.457-1.12l-.934-.356A3 3 0 004.817 14.5l-.337.094a.75.75 0 00-.414.922l.531 1.062a.75.75 0 00.922.414l.094-.033a3 3 0 00.584.062l.356-.093a.75.75 0 00.414-.922zM15.397 16.28a.75.75 0 00-.414.922l.53 1.062a.75.75 0 00.922.414l.095-.034a3 3 0 00.584.062l.356-.093a.75.75 0 00.414-.922l-.53-1.062a.75.75 0 00-.922-.414l-.094.033a3 3 0 00-.584-.062l-.356.093zM12 18.75a.75.75 0 00-.75.75v.258c0 .241.018.481.053.719L11.25 21a.75.75 0 001.5 0l-.053-.719c.035-.238.053-.478.053-.719v-.258a.75.75 0 00-.75-.75zM6.75 20.25a.75.75 0 01-.75-.75V19.5a3 3 0 00-.785-2.028l-.133-.166a.75.75 0 01.996-1.196l.166.133c.277.22.56.438.85.654A.75.75 0 017 17.585v.165a.75.75 0 01-.25.565.75.75 0 01-.5.185zM18.75 20.25a.75.75 0 01-.5-.185.75.75 0 01-.25-.565v-.165a.75.75 0 01.277-.577c.29-.216.573-.434.85-.654l.166-.133a.75.75 0 01.996 1.196l-.133.166A3 3 0 0019.5 19.5v.75a.75.75 0 01-.75.75zM12.75 3a.75.75 0 01.75.75v.258a3 3 0 00-.735 0L12 3.25V3a.75.75 0 01.75-.75zM15.397 16.28a.75.75 0 00-.414.922l.53 1.062a.75.75 0 00.922.414l.095-.034a3 3 0 00.584.062l.356-.093a.75.75 0 00.414-.922l-.53-1.062a.75.75 0 00-.922-.414l-.094.033a3 3 0 00-.584-.062l-.356.093zM12 18.75a.75.75 0 00-.75.75v.258c0 .241.018.481.053.719L11.25 21a.75.75 0 001.5 0l-.053-.719c.035-.238.053-.478.053-.719v-.258a.75.75 0 00-.75-.75zM6.75 20.25a.75.75 0 01-.75-.75V19.5a3 3 0 00-.785-2.028l-.133-.166a.75.75 0 01.996-1.196l.166.133c.277.22.56.438.85.654A.75.75 0 017 17.585v.165a.75.75 0 01-.25.565.75.75 0 01-.5.185zM18.75 20.25a.75.75 0 01-.5-.185.75.75 0 01-.25-.565v-.165a.75.75 0 01.277-.577c.29-.216.573-.434.85-.654l.166-.133a.75.75 0 01.996 1.196l-.133.166A3 3 0 0019.5 19.5v.75a.75.75 0 01-.75.75z" clip-rule="evenodd" />
-                                </svg>
-                                <span>Golden Giver</span>
-                            </div>`;
-            } else if (amount >= 500) {
                 // Silver Sponsor Badge
                 badgeHtml = `<div class="badge-base badge-silver">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
@@ -293,65 +295,6 @@
             badgeContainerEl.innerHTML = badgeHtml;
         };
 
-        // Asynchronously sign in and then set up the listener
-        const initialize = async () => {
-            try {
-                // Sign in with the custom token if available, otherwise sign in anonymously
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                // Get the user ID after sign-in
-                userId = auth.currentUser?.uid || crypto.randomUUID();
-
-                // Document path for user's personal donation data
-                const personalDonationsRef = doc(db, `/artifacts/${appId}/users/${userId}/personal-donations/my-donation-data`);
-
-                // Initial data for public campaign document if it doesn't exist
-                const publicInitialData = { currentAmount: 0, totalDonations: 0, goalAmount: 5000, maxDonation: 100 };
-                await setDoc(publicDonationsRef, publicInitialData, { merge: true });
-
-                // Initial data for personal document if it doesn't exist
-                const personalInitialData = { myTotalDonated: 0 };
-                await setDoc(personalDonationsRef, personalInitialData, { merge: true });
-
-                // Set up a real-time listener for public data
-                onSnapshot(publicDonationsRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        const currentAmount = data.currentAmount || 0;
-                        const totalDonations = data.totalDonations || 0;
-                        GOAL_AMOUNT = data.goalAmount || 5000;
-                        MAX_DONATION = data.maxDonation || 100;
-                        updatePublicUI(currentAmount, totalDonations, GOAL_AMOUNT);
-                    } else {
-                        setDoc(publicDonationsRef, publicInitialData);
-                    }
-                }, (error) => {
-                    console.error("Error listening to public document:", error);
-                });
-
-                // Set up a real-time listener for personal data
-                onSnapshot(personalDonationsRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        const myTotalDonated = data.myTotalDonated || 0;
-                        updateBadges(myTotalDonated);
-                    } else {
-                        setDoc(personalDonationsRef, personalInitialData);
-                    }
-                }, (error) => {
-                    console.error("Error listening to personal document:", error);
-                });
-
-            } catch (error) {
-                console.error("Firebase initialization or authentication failed:", error);
-                messageBoxEl.textContent = "Error: Failed to connect to the database.";
-            }
-        };
-
         // Function to update the public UI with current data from Firestore
         const updatePublicUI = (currentAmount, totalDonations, goalAmount) => {
             currentAmountEl.textContent = `$${currentAmount.toLocaleString()}`;
@@ -360,7 +303,7 @@
             progressBarEl.style.width = `${progressPercentage}%`;
             totalDonationsEl.textContent = totalDonations;
         };
-
+        
         // Function to handle the donation
         const handleDonate = async () => {
             const donationAmount = parseFloat(donationAmountInput.value);
@@ -386,7 +329,7 @@
                 });
 
                 // Update the user's personal donation total
-                const personalDonationsRef = doc(db, `/artifacts/${appId}/users/${userId}/personal-donations/my-donation-data`);
+                const personalDonationsRef = doc(db, `/artifacts/${APP_ID}/users/${userId}/personal-donations/my-donation-data`);
                 await updateDoc(personalDonationsRef, {
                     myTotalDonated: increment(donationAmount)
                 });
@@ -452,6 +395,67 @@
                 passwordInput.value = ''; // Clear password input
             } else {
                 passwordMessageBox.textContent = 'Incorrect password. Please try again.';
+            }
+        };
+        
+        // Asynchronously sign in and then set up the listener
+        const initialize = async () => {
+            try {
+                // Sign in anonymously to get a unique user ID
+                await signInAnonymously(auth);
+
+                // Now that we are authenticated, set up the listeners
+                // and get the user ID from the authentication state.
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+
+                        // Document path for user's personal donation data
+                        const personalDonationsRef = doc(db, `/artifacts/${APP_ID}/users/${userId}/personal-donations/my-donation-data`);
+                        
+                        // Initial data for public campaign document if it doesn't exist
+                        const publicInitialData = { currentAmount: 0, totalDonations: 0, goalAmount: 5000, maxDonation: 100 };
+                        await setDoc(publicDonationsRef, publicInitialData, { merge: true });
+
+                        // Initial data for personal document if it doesn't exist
+                        const personalInitialData = { myTotalDonated: 0 };
+                        await setDoc(personalDonationsRef, personalInitialData, { merge: true });
+
+                        // Set up a real-time listener for public data
+                        onSnapshot(publicDonationsRef, (docSnap) => {
+                            if (docSnap.exists()) {
+                                const data = docSnap.data();
+                                const currentAmount = data.currentAmount || 0;
+                                const totalDonations = data.totalDonations || 0;
+                                GOAL_AMOUNT = data.goalAmount || 5000;
+                                MAX_DONATION = data.maxDonation || 100;
+                                updatePublicUI(currentAmount, totalDonations, GOAL_AMOUNT);
+                            } else {
+                                setDoc(publicDonationsRef, publicInitialData);
+                            }
+                        }, (error) => {
+                            console.error("Error listening to public document:", error);
+                        });
+
+                        // Set up a real-time listener for personal data
+                        onSnapshot(personalDonationsRef, (docSnap) => {
+                            if (docSnap.exists()) {
+                                const data = docSnap.data();
+                                const myTotalDonated = data.myTotalDonated || 0;
+                                updateBadges(myTotalDonated);
+                            } else {
+                                setDoc(personalDonationsRef, personalInitialData);
+                            }
+                        }, (error) => {
+                            console.error("Error listening to personal document:", error);
+                        });
+                    } else {
+                        console.log("No user is signed in.");
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase initialization or authentication failed:", error);
+                messageBoxEl.textContent = "Error: Failed to connect to the database. Please check your Firebase config and security rules.";
             }
         };
 
