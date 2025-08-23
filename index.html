@@ -188,19 +188,14 @@
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyASQMgjJl2k4kLVZN_0cn8q1TRD7RmHjP8",
-            authDomain: "supersickbike.firebaseapp.com",
-            projectId: "supersickbike",
-            storageBucket: "supersickbike.firebasestorage.app",
-            messagingSenderId: "659436765201",
-            appId: "1:659436765201:web:f518de4363193bf4a1f1b0",
-            measurementId: "G-01RH6YHV8D"
-        };
+        // IMPORTANT: Use the global variables provided by the Canvas environment.
+        // DO NOT use a hardcoded Firebase configuration.
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -244,11 +239,8 @@
         let MAX_DONATION;
         
         const SETTINGS_PASSWORD = 'InTheShadow';
-        // Use a hardcoded ID since we are not using __app_id
-        const APP_ID = 'super-sick-bike-app'; 
-
         // Document path for public campaign data
-        const publicDonationsRef = doc(db, `/artifacts/${APP_ID}/public/data/donations-data/main-donations`);
+        const publicDonationsRef = doc(db, `/artifacts/${appId}/public/data/donations-data/main-donations`);
 
         // Function to update the badges based on an amount
         const updateBadges = (amount) => {
@@ -329,7 +321,7 @@
                 });
 
                 // Update the user's personal donation total
-                const personalDonationsRef = doc(db, `/artifacts/${APP_ID}/users/${userId}/personal-donations/my-donation-data`);
+                const personalDonationsRef = doc(db, `/artifacts/${appId}/users/${userId}/personal-donations/my-donation-data`);
                 await updateDoc(personalDonationsRef, {
                     myTotalDonated: increment(donationAmount)
                 });
@@ -401,8 +393,12 @@
         // Asynchronously sign in and then set up the listener
         const initialize = async () => {
             try {
-                // Sign in anonymously to get a unique user ID
-                await signInAnonymously(auth);
+                // Sign in using the custom token provided by the environment
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
 
                 // Now that we are authenticated, set up the listeners
                 // and get the user ID from the authentication state.
@@ -411,7 +407,7 @@
                         userId = user.uid;
 
                         // Document path for user's personal donation data
-                        const personalDonationsRef = doc(db, `/artifacts/${APP_ID}/users/${userId}/personal-donations/my-donation-data`);
+                        const personalDonationsRef = doc(db, `/artifacts/${appId}/users/${userId}/personal-donations/my-donation-data`);
                         
                         // Initial data for public campaign document if it doesn't exist
                         const publicInitialData = { currentAmount: 0, totalDonations: 0, goalAmount: 5000, maxDonation: 100 };
