@@ -3,50 +3,565 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Fundraiser App</title>
+    <title>The Super Sick Bike Fundraiser</title>
+    <!-- Use Tailwind CSS for rapid, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use the Inter font for a clean, modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Confetti library for the "thank you" animation -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Custom animation for the button pop */
+        .donate-pop {
+            animation: pop 0.2s ease-in-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        /* Lock icon SVG */
+        .badge-lock {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            opacity: 0.9;
+            pointer-events: none;
+            color: #4b5563; /* Tailwind gray-600 */
+        }
+        /* Custom styles for the badges to give them a more pronounced 3D/shadow effect */
+        .badge-unlocked {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .badge-unlocked:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        /* Glassmorphism effect for locked badges */
+        .badge-locked {
+            filter: grayscale(100%) blur(1px);
+            opacity: 0.7;
+            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+        }
+    </style>
 </head>
-<body>
-    <h1>My Fundraiser App</h1>
-    <p>This is a refactored version of the app to demonstrate secure handling of Firebase credentials for use with GitHub.</p>
-    <p id="status-message">Loading Firebase...</p>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4 relative space-y-8">
 
-    <!--
-        This is the new approach. We will load the Firebase configuration from a separate,
-        untracked file that you will create. This keeps your API key secure and out of your Git history.
-        You will need to create a file named 'firebase-keys.js' and add it to your .gitignore.
-    -->
-    <script src="./firebase-keys.js"></script>
+    <!-- Main container for the GoFundMe-like page -->
+    <div class="bg-white rounded-xl shadow-2xl overflow-hidden max-w-2xl w-full p-8 space-y-8">
+
+        <!-- User ID display for reference -->
+        <div class="text-xs text-gray-400 text-right">User ID: <span id="user-id">Loading...</span></div>
+
+        <!-- Campaign Header -->
+        <div class="text-center space-y-4">
+            <h1 class="text-4xl font-bold text-gray-800">Help Fund The Super Sick Bike!</h1>
+        </div>
+
+        <!-- Campaign Image -->
+        <div class="rounded-lg overflow-hidden shadow-lg">
+            <!-- User-provided image for the "sick bike" -->
+            <img src="https://i.imgur.com/clsLfk1.png" alt="The Super Sick Bike" class="w-full h-auto object-cover">
+        </div>
+
+        <!-- Donation Progress Section -->
+        <div class="space-y-4">
+            <div class="flex justify-between items-center text-lg font-semibold text-gray-700">
+                <span id="current-amount">$0</span>
+                <span id="goal-amount">goal of $5,000</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progress-bar" class="bg-yellow-500 h-3 rounded-full transition-all duration-500 ease-in-out" style="width: 0%;"></div>
+            </div>
+
+            <div class="text-sm text-gray-500">
+                <span id="total-donations">0</span> donations
+            </div>
+        </div>
+
+        <!-- Campaign Story Section -->
+        <div class="space-y-4">
+            <h2 class="text-2xl font-semibold text-gray-800">Our Mission</h2>
+            <p id="story-text" class="text-gray-600 leading-relaxed">
+                We are Jake, Elliot, and Brody, and our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. The Super Sick Bike is just our prototype for a wider project. Our next step is to get similar bikes around the Metro area.
+                Eventually, we want to make private transportation available across the country. We will have the bikes stationed around Australia, so you can just hop on and get to your destination easily, without having to pay.
+            </p>
+        </div>
+        
+        <!-- New: Gemini-powered Thank You Message Section -->
+        <div id="thank-you-section" class="bg-gray-100 p-6 rounded-lg shadow-inner space-y-4 hidden">
+            <h3 class="text-xl font-semibold text-gray-800">A special thank you to you!</h3>
+            <div id="thank-you-message" class="text-gray-600 leading-relaxed italic text-center"></div>
+        </div>
+
+        <!-- Donation Form -->
+        <div class="bg-gray-100 p-6 rounded-lg shadow-inner space-y-4">
+            <h3 class="text-xl font-semibold text-gray-800">Make a Donation</h3>
+            <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <label for="donation-amount" class="sr-only">Donation Amount</label>
+                <input type="number" id="donation-amount" min="1" placeholder="Enter amount..." class="flex-1 w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors">
+                <button id="donate-button" class="w-full sm:w-auto px-6 py-3 bg-yellow-500 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition-colors transform hover:scale-105">
+                    Donate
+                </button>
+            </div>
+            <div id="message-box" class="text-sm font-medium text-center text-gray-700 mt-2 min-h-[1.5rem]"></div>
+        </div>
+    </div>
+
+    <!-- New: Badge Tiers Section -->
+    <div id="badge-tiers-section" class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-8 space-y-6">
+        <h2 class="text-2xl font-semibold text-gray-800">Badge Tiers</h2>
+        <div id="badge-tiers-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <!-- Badges will be dynamically inserted here -->
+        </div>
+        <p id="my-donated-amount" class="text-lg font-medium text-center text-gray-600 mt-4">
+            You've donated: <span id="total-donated-user" class="font-bold text-gray-800">$0</span>
+        </p>
+    </div>
+
+    <!-- Password modal (hidden by default) -->
+    <div id="password-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <!-- Themed password box -->
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-80 space-y-4">
+            <h4 class="text-xl font-semibold text-gray-800 text-center">Enter Password</h4>
+            <!-- Themed input field -->
+            <input type="password" id="password-input" placeholder="Password" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors text-gray-800">
+            <!-- Themed submit button -->
+            <button id="password-submit" class="w-full py-3 bg-yellow-500 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition-colors">
+                Submit
+            </button>
+            <!-- Themed exit button -->
+            <button id="password-exit-btn" class="w-full py-3 bg-gray-300 text-gray-800 font-bold rounded-lg shadow-lg hover:bg-gray-400 transition-colors">
+                Exit
+            </button>
+            <div id="password-message" class="text-sm text-center text-red-500 min-h-[1.5rem]"></div>
+        </div>
+    </div>
+
+    <!-- Developer Controls Panel (hidden by default) -->
+    <!-- Themed dev panel -->
+    <div id="dev-panel" class="fixed bottom-4 right-4 w-96 bg-white rounded-xl shadow-2xl p-8 space-y-4 hidden z-50 text-gray-800">
+        <h4 class="text-lg font-semibold border-b border-gray-300 pb-2">Developer Controls</h4>
+        <div class="space-y-2">
+            <label for="dev-target" class="block text-sm text-gray-600">Change Goal ($):</label>
+            <!-- Themed input field -->
+            <input type="number" id="dev-target" placeholder="New Goal" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors text-gray-800">
+            <!-- Themed button -->
+            <button id="dev-set-target" class="w-full py-3 bg-purple-500 text-white font-bold rounded-lg shadow-lg hover:bg-purple-600 transition-colors">Set Goal</button>
+        </div>
+        <div class="space-y-2">
+            <label for="dev-amount" class="block text-sm text-gray-600">Change Amount ($):</label>
+            <!-- Themed input field -->
+            <input type="number" id="dev-amount" placeholder="New Amount" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors text-gray-800">
+            <!-- Themed button -->
+            <button id="dev-set-amount" class="w-full py-3 bg-purple-500 text-white font-bold rounded-lg shadow-lg hover:bg-purple-600 transition-colors">Set Amount</button>
+        </div>
+        <!-- NEW: Max Donation Amount Control -->
+        <div class="space-y-2">
+            <label for="dev-max-donation" class="block text-sm text-gray-600">Change Max Donation ($):</label>
+            <input type="number" id="dev-max-donation" placeholder="New Max Amount" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors text-gray-800">
+            <button id="dev-set-max-donation" class="w-full py-3 bg-purple-500 text-white font-bold rounded-lg shadow-lg hover:bg-purple-600 transition-colors">Set Max</button>
+        </div>
+        <!-- Themed button -->
+        <button id="dev-reset" class="w-full py-3 bg-red-600 text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-colors">Reset Everything</button>
+    </div>
+
+    <!-- Developer Icon to toggle the panel -->
+    <button id="dev-toggle" class="fixed bottom-4 left-4 text-3xl text-gray-800 opacity-20 hover:opacity-100 transition-opacity z-50">
+        ⚙️
+    </button>
 
     <script type="module">
-        // Import necessary Firebase functions.
+        // Import necessary Firebase functions. Updated to version 11.6.1 for stability.
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Added updateDoc and increment for atomic operations
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const statusMessageEl = document.getElementById('status-message');
+        // Firebase configuration and other constants
+        // IMPORTANT: Replace this with your own Firebase project's config
+        // Get this from your Firebase console -> Project settings -> General
+        const firebaseConfig = {
+  apiKey: "AIzaSyCPDey68EN2kuPEwcIb4x5ldl3hM9ig__w",
+  authDomain: "super-sick-bike-fundraiser.firebaseapp.com",
+  projectId: "super-sick-bike-fundraiser",
+  storageBucket: "super-sick-bike-fundraiser.firebasestorage.app",
+  messagingSenderId: "17825933291",
+  appId: "1:17825933291:web:310e9a43f0a313a15bdbae"
+};
+        const appName = "super-sick-bike-fundraiser-app"; // A unique name for your application
+        const DEFAULT_GOAL = 5000;
+        const DEFAULT_MAX_DONATION_AMOUNT = 100;
+        const PASSWORD = 'InTheShadow';
+        let db, auth, userId;
 
-        // Check if the firebaseConfig object is available from the separate file.
-        // NOTE: Make sure to add `window.` before the firebaseConfig object in your firebase-keys.js file.
-        if (typeof window.firebaseConfig !== 'undefined') {
+        // An array of all badge tiers with their required donation amounts and styles
+        const BADGE_TIERS = [
+            { name: "Puddle Jumper", icon: "💧", amount: 0, classes: "text-gray-800 bg-gradient-to-br from-gray-200 to-gray-400" },
+            { name: "Chain Link", icon: "🔗", amount: 10, classes: "text-gray-800 bg-gradient-to-br from-blue-300 to-blue-500" },
+            { name: "Spoke Spinner", icon: "🛠️", amount: 20, classes: "text-gray-800 bg-gradient-to-br from-orange-300 to-orange-500" },
+            { name: "Gear Grinder", icon: "⚙️", amount: 50, classes: "text-gray-800 bg-gradient-to-br from-sky-300 to-sky-500" },
+            { name: "Trailblazer", icon: "🏆", amount: 100, classes: "text-white bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg" },
+            { name: "Road Warrior", icon: "🚴‍♂️", amount: 200, classes: "text-white bg-gradient-to-br from-stone-400 to-stone-600 shadow-lg" },
+            { name: "Bike Lord", icon: "👑", amount: 500, classes: "text-white bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg" },
+        ];
+
+        // Function to update the UI with current data
+        const updateUI = (currentAmount, totalDonations, goalAmount) => {
+            const currentAmountEl = document.getElementById('current-amount');
+            const goalAmountEl = document.getElementById('goal-amount');
+            const progressBarEl = document.getElementById('progress-bar');
+            const totalDonationsEl = document.getElementById('total-donations');
+            
+            currentAmountEl.textContent = `$${currentAmount.toLocaleString()}`;
+            goalAmountEl.textContent = `goal of $${goalAmount.toLocaleString()}`;
+            const progressPercentage = Math.min((currentAmount / goalAmount) * 100, 100);
+            progressBarEl.style.width = `${progressPercentage}%`;
+            totalDonationsEl.textContent = totalDonations;
+        };
+
+        // Function to render all badge tiers based on the user's total donation amount
+        const renderBadges = (totalDonated) => {
+            const container = document.getElementById('badge-tiers-container');
+            container.innerHTML = ''; // Clear previous badges
+
+            BADGE_TIERS.forEach(badge => {
+                const isUnlocked = totalDonated >= badge.amount;
+                const badgeElement = document.createElement('div');
+                badgeElement.className = `relative flex flex-col items-center justify-center p-4 rounded-xl text-center transition-all duration-300 transform border-2 border-gray-200`;
+
+                if (isUnlocked) {
+                    badgeElement.innerHTML = `
+                        <span class="text-3xl">${badge.icon}</span>
+                        <span class="font-bold text-lg mt-2">${badge.name}</span>
+                        <p class="text-sm text-gray-600 mt-1">$${badge.amount}</p>
+                    `;
+                    badgeElement.classList.add('badge-unlocked', ...badge.classes.split(' '));
+                } else {
+                    badgeElement.innerHTML = `
+                        <span class="text-3xl">${badge.icon}</span>
+                        <span class="font-bold text-lg mt-2">${badge.name}</span>
+                        <p class="text-sm text-gray-400 mt-1">
+                            Locked until $${badge.amount}
+                        </p>
+                        <svg class="badge-lock" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clip-rule="evenodd" />
+                        </svg>
+                    `;
+                    badgeElement.classList.add('badge-locked', 'bg-gray-100');
+                }
+                container.appendChild(badgeElement);
+            });
+        };
+
+        // Function to handle the text generation API call
+        const handleGenerateThanks = async () => {
+            const thankYouMessageEl = document.getElementById('thank-you-message');
+            thankYouMessageEl.textContent = 'Generating your personalized message...';
+            
+            const prompt = "Write a short, fun, and heartfelt thank you message for someone who just donated to a bike fundraiser. Make it sound like it's from a person who loves bikes.";
+            
+            const payload = { 
+                contents: [{
+                    parts: [{ text: prompt }]
+                }]
+            };
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
             try {
-                // Initialize Firebase with the loaded config.
-                const app = initializeApp(window.firebaseConfig);
-                const auth = getAuth(app);
-                const db = getFirestore(app);
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
 
-                statusMessageEl.textContent = "Firebase is successfully initialized and ready to go!";
-                console.log("Firebase app:", app);
-                console.log("Auth instance:", auth);
-                console.log("Firestore instance:", db);
-
-            } catch (error) {
-                statusMessageEl.textContent = `Error initializing Firebase: ${error.message}`;
-                console.error("Firebase initialization failed:", error);
+                const result = await response.json();
+                const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (generatedText) {
+                    thankYouMessageEl.textContent = generatedText;
+                } else {
+                    thankYouMessageEl.textContent = 'Sorry, could not generate a message right now. Please try again!';
+                }
+            } catch (e) {
+                console.error("Error generating text:", e);
+                thankYouMessageEl.textContent = `Error: ${e.message}`;
             }
-        } else {
-            statusMessageEl.textContent = "Error: Firebase configuration is missing. Make sure 'firebase-keys.js' is created and linked correctly.";
-            console.error("Firebase config object not found. Did you forget to create the file or add the config?");
-        }
+        };
+
+        // Helper function for exponential backoff during API calls
+        const withExponentialBackoff = async (apiCall, maxRetries = 5, delay = 1000) => {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    return await apiCall();
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+                }
+            }
+        };
+
+        // Wait for the window to load before starting
+        window.onload = async function() {
+            if (!firebaseConfig.apiKey) {
+                console.error("Firebase config is missing.");
+                document.getElementById('message-box').textContent = "Error: Firebase configuration is missing.";
+                return;
+            }
+
+            // Initialize Firebase app and services
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // Get references to DOM elements
+            const thankYouSection = document.getElementById('thank-you-section');
+            const donationAmountInput = document.getElementById('donation-amount');
+            const donateButton = document.getElementById('donate-button');
+            const messageBoxEl = document.getElementById('message-box');
+            const totalDonatedUserEl = document.getElementById('total-donated-user');
+
+            // Get references to dev controls and password modal
+            const devToggle = document.getElementById('dev-toggle');
+            const devPanel = document.getElementById('dev-panel');
+            const passwordModal = document.getElementById('password-modal');
+            const passwordInput = document.getElementById('password-input');
+            const passwordSubmitBtn = document.getElementById('password-submit');
+            const passwordExitBtn = document.getElementById('password-exit-btn');
+            const passwordMessageEl = document.getElementById('password-message');
+            const devTargetInput = document.getElementById('dev-target');
+            const devSetTargetBtn = document.getElementById('dev-set-target');
+            const devAmountInput = document.getElementById('dev-amount');
+            const devSetAmountBtn = document.getElementById('dev-set-amount');
+            const devMaxDonationInput = document.getElementById('dev-max-donation');
+            const devSetMaxDonationBtn = document.getElementById('dev-set-max-donation');
+            const devResetBtn = document.getElementById('dev-reset');
+
+            // Set up a listener for auth state changes
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    document.getElementById('user-id').textContent = userId;
+                    console.log("User signed in with UID:", userId);
+
+                    // Set up Firestore listeners after a user is authenticated
+                    await setupFirestoreListeners();
+
+                } else {
+                    // Sign in anonymously if not authenticated
+                    console.log("Signing in anonymously...");
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (error) {
+                        console.error("Anonymous sign-in failed:", error);
+                        messageBoxEl.textContent = "Error: Failed to sign in. Please try again later.";
+                    }
+                }
+            });
+
+            // Set up real-time data listeners
+            const setupFirestoreListeners = async () => {
+                const publicDataRef = doc(db, `apps/${appName}/public/data/fundraiser`);
+                const userDataRef = doc(db, `apps/${appName}/users/${userId}/private/donations`);
+
+                // Listen for changes to the public fundraiser data
+                onSnapshot(publicDataRef, (doc) => {
+                    if (doc.exists()) {
+                        const data = doc.data();
+                        updateUI(data.currentAmount, data.totalDonations, data.goalAmount);
+                        console.log("Public data updated:", data);
+                    } else {
+                        // Initialize public data if it doesn't exist
+                        setDoc(publicDataRef, { 
+                            currentAmount: 0, 
+                            totalDonations: 0, 
+                            goalAmount: DEFAULT_GOAL,
+                            maxDonationAmount: DEFAULT_MAX_DONATION_AMOUNT
+                        });
+                        console.log("Public data initialized.");
+                    }
+                }, (error) => {
+                    console.error("Error listening to public data:", error);
+                });
+
+                // Listen for changes to the user's private donation data
+                onSnapshot(userDataRef, (doc) => {
+                    let totalDonated = 0;
+                    if (doc.exists()) {
+                        totalDonated = doc.data().totalDonated || 0;
+                    }
+                    totalDonatedUserEl.textContent = `$${totalDonated.toLocaleString()}`;
+                    renderBadges(totalDonated);
+                    console.log("User data updated:", totalDonated);
+                }, (error) => {
+                    console.error("Error listening to user data:", error);
+                });
+            };
+
+            // Event listener for the donate button
+            donateButton.addEventListener('click', async () => {
+                const donationAmount = parseInt(donationAmountInput.value, 10);
+                if (isNaN(donationAmount) || donationAmount <= 0) {
+                    messageBoxEl.textContent = 'Please enter a valid amount.';
+                    return;
+                }
+
+                // Get public data to check max donation limit
+                const publicDataRef = doc(db, `apps/${appName}/public/data/fundraiser`);
+                const publicDataSnap = await getDoc(publicDataRef);
+                const maxDonationAmount = publicDataSnap.exists() ? publicDataSnap.data().maxDonationAmount : DEFAULT_MAX_DONATION_AMOUNT;
+
+                if (donationAmount > maxDonationAmount) {
+                    messageBoxEl.textContent = `Donations are limited to $${maxDonationAmount}. Please enter a smaller amount.`;
+                    return;
+                }
+
+                // Add pop effect to button and show thank you section
+                donateButton.classList.add('donate-pop');
+                setTimeout(() => donateButton.classList.remove('donate-pop'), 200);
+                thankYouSection.classList.remove('hidden');
+
+                // Generate and display thank you message
+                handleGenerateThanks();
+
+                // Firestore updates for public and user data
+                try {
+                    // Update public data with a transaction for atomicity
+                    const publicDataRef = doc(db, `apps/${appName}/public/data/fundraiser`);
+                    await updateDoc(publicDataRef, {
+                        currentAmount: increment(donationAmount),
+                        totalDonations: increment(1)
+                    });
+
+                    // Update user's private donation total
+                    const userDataRef = doc(db, `apps/${appName}/users/${userId}/private/donations`);
+                    await setDoc(userDataRef, {
+                        totalDonated: increment(donationAmount)
+                    }, { merge: true });
+
+                    messageBoxEl.textContent = `Thank you for your $${donationAmount} donation!`;
+                    donationAmountInput.value = '';
+
+                    // Confetti!
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+
+                } catch (e) {
+                    console.error("Error donating:", e);
+                    messageBoxEl.textContent = 'An error occurred. Please try again.';
+                }
+            });
+
+            // Developer Controls Logic
+            devToggle.addEventListener('click', () => {
+                passwordModal.classList.remove('hidden');
+            });
+
+            passwordSubmitBtn.addEventListener('click', () => {
+                if (passwordInput.value === PASSWORD) {
+                    passwordModal.classList.add('hidden');
+                    devPanel.classList.remove('hidden');
+                    passwordMessageEl.textContent = '';
+                } else {
+                    passwordMessageEl.textContent = 'Incorrect password.';
+                }
+                passwordInput.value = '';
+            });
+
+            passwordExitBtn.addEventListener('click', () => {
+                passwordModal.classList.add('hidden');
+                passwordInput.value = '';
+                passwordMessageEl.textContent = '';
+            });
+
+            // Set new goal amount
+            devSetTargetBtn.addEventListener('click', async () => {
+                const newGoal = parseInt(devTargetInput.value, 10);
+                if (!isNaN(newGoal) && newGoal > 0) {
+                    try {
+                        const publicDataRef = doc(db, `apps/${appName}/public/data/fundraiser`);
+                        await setDoc(publicDataRef, { goalAmount: newGoal }, { merge: true });
+                        passwordMessageEl.textContent = 'Goal updated!';
+                    } catch (e) {
+                        console.error("Error setting goal:", e);
+                        passwordMessageEl.textContent = 'Error setting goal.';
+                    }
+                }
+            });
+
+            // Set new amount
+            devSetAmountBtn.addEventListener('click', async () => {
+                const newAmount = parseInt(devAmountInput.value, 10);
+                if (!isNaN(newAmount) && newAmount >= 0) {
+                    try {
+                        const publicDataRef = doc(db, `apps/${appName}/public/data/fundraiser`);
+                        await setDoc(publicDataRef, { currentAmount: newAmount, totalDonations: 0 }, { merge: true });
+                        passwordMessageEl.textContent = 'Amount updated!';
+                    } catch (e) {
+                        console.error("Error setting amount:", e);
+                        passwordMessageEl.textContent = 'Error setting amount.';
+                    }
+                }
+            });
+
+            // Set new max donation amount
+            devSetMaxDonationBtn.addEventListener('click', async () => {
+                const newMax = parseInt(devMaxDonationInput.value, 10);
+                if (!isNaN(newMax) && newMax > 0) {
+                    try {
+                        const publicDataRef = doc(db, `apps/${appName}/public/data/fundraiser`);
+                        await setDoc(publicDataRef, { maxDonationAmount: newMax }, { merge: true });
+                        passwordMessageEl.textContent = 'Max donation updated!';
+                    } catch (e) {
+                        console.error("Error setting max donation:", e);
+                        passwordMessageEl.textContent = 'Error setting max donation.';
+                    }
+                }
+            });
+
+            // Reset everything
+            devResetBtn.addEventListener('click', async () => {
+                try {
+                    const publicDataRef = doc(db, `apps/${appName}/public/data/fundraiser`);
+                    const userDonationsQuery = await getDocs(doc(db, `apps/${appName}/users/${userId}/private/donations`));
+
+                    await Promise.all([
+                        setDoc(publicDataRef, {
+                            currentAmount: 0,
+                            totalDonations: 0,
+                            goalAmount: DEFAULT_GOAL,
+                            maxDonationAmount: DEFAULT_MAX_DONATION_AMOUNT
+                        }),
+                        setDoc(doc(db, `apps/${appName}/users/${userId}/private/donations`), { totalDonated: 0 })
+                    ]);
+                    passwordMessageEl.textContent = 'All data reset!';
+                } catch (e) {
+                    console.error("Error resetting data:", e);
+                    passwordMessageEl.textContent = 'Error resetting data.';
+                }
+            });
+
+        };
     </script>
 </body>
 </html>
