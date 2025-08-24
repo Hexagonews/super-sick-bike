@@ -1,169 +1,120 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpikePrime GoFundMe</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gradient-to-b from-yellow-400 via-pink-500 to-blue-400 flex flex-col items-center justify-center p-6 font-sans">
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCPDey68EN2kuPEwcIb4x5ldl3hM9ig__w",
-  authDomain: "super-sick-bike-fundraiser.firebaseapp.com",
-  projectId: "super-sick-bike-fundraiser",
-  storageBucket: "super-sick-bike-fundraiser.firebasestorage.app",
-  messagingSenderId: "17825933291",
-  appId: "1:17825933291:web:310e9a43f0a313a15bdbae"
-};
+  <div class="w-full max-w-3xl shadow-2xl rounded-3xl border-4 border-yellow-400 bg-white p-10 text-center space-y-6">
+    <h1 class="text-4xl font-extrabold text-pink-600 drop-shadow-lg">Our Mission</h1>
+    <p class="text-gray-800 text-lg" id="mission-text">
+      We are on a mission to raise <span class="font-bold" id="goal-amount">$5000</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
+    </p>
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const donorsRef = collection(db, "donors");
-const settingsDoc = doc(db, "settings", "fundraiser");
-
-export default function GoFundMeSpikePrime() {
-  const [goal, setGoal] = useState(5000);
-  const [raised, setRaised] = useState(0);
-  const [donors, setDonors] = useState([]);
-  const [email, setEmail] = useState("");
-  const [amount, setAmount] = useState("");
-  const [showSettings, setShowSettings] = useState(false);
-  const [password, setPassword] = useState("");
-  const [settingsGoal, setSettingsGoal] = useState(goal);
-  const [settingsRaised, setSettingsRaised] = useState(raised);
-
-  useEffect(() => {
-    const fetchDonors = async () => {
-      const snapshot = await getDocs(donorsRef);
-      const data = snapshot.docs.map(doc => doc.data());
-      setDonors(data.slice(-10));
-      const total = data.reduce((acc, d) => acc + d.amount, 0);
-      setRaised(total);
-      setSettingsRaised(total);
-    };
-
-    const fetchSettings = async () => {
-      const docSnap = await getDoc(settingsDoc);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setGoal(data.goal || 5000);
-        setRaised(data.raised || 0);
-        setSettingsGoal(data.goal || 5000);
-        setSettingsRaised(data.raised || 0);
-      }
-    };
-
-    fetchDonors();
-    fetchSettings();
-  }, []);
-
-  const handleDonate = async () => {
-    const regex = /^[^@]+\.[^@]+@rosaliens\.com$/;
-    if (!regex.test(email)) {
-      alert("Please use a valid rosaliens.com email in the format firstname.lastname@rosaliens.com");
-      return;
-    }
-    const donationAmount = parseFloat(amount);
-    if (isNaN(donationAmount) || donationAmount <= 0) {
-      alert("Please enter a valid donation amount.");
-      return;
-    }
-
-    const newDonor = { email, amount: donationAmount };
-
-    try {
-      await addDoc(donorsRef, newDonor);
-      setDonors(prev => [...prev, newDonor].slice(-10));
-      setRaised(prev => Math.min(prev + donationAmount, goal));
-      setEmail("");
-      setAmount("");
-    } catch (err) {
-      console.error("Error saving donation:", err);
-      alert("Failed to save donation. Please try again.");
-    }
-  };
-
-  const handleSettingsSave = async () => {
-    if (password !== "InTheShadow") {
-      alert("Incorrect password!");
-      return;
-    }
-    try {
-      await setDoc(settingsDoc, { goal: settingsGoal, raised: settingsRaised });
-      setGoal(settingsGoal);
-      setRaised(settingsRaised);
-      alert("Settings updated!");
-      setShowSettings(false);
-    } catch (err) {
-      console.error("Error saving settings:", err);
-      alert("Failed to save settings.");
-    }
-  };
-
-  const progress = Math.min((raised / goal) * 100, 100);
-
-  return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
-      <Card className="w-full max-w-2xl shadow-2xl rounded-2xl border-4 border-yellow-400">
-        <CardContent className="p-8 text-center space-y-6">
-          <h1 className="text-3xl font-bold text-[#FFBF00]">Our Mission</h1>
-          <p className="text-gray-700 text-lg">
-            We are on a mission to raise <span className="font-semibold">${goal}</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
-          </p>
-
-          <div className="flex justify-center gap-3 mt-4">
-            {[10, 25, 50, 100].map((preset) => (
-              <Button key={preset} onClick={() => setAmount(String(preset))} className="bg-[#FF00A0] hover:bg-[#cc0080] text-white rounded-xl px-4 py-2 shadow">
-                ${preset}
-              </Button>
-            ))}
-          </div>
-
-          <div className="w-full bg-gray-200 rounded-full h-6 overflow-hidden mt-6">
-            <AnimatePresence>
-              <motion.div key={raised} initial={{ width: 0 }} animate={{ width: `${progress}%` }} exit={{ width: 0 }} transition={{ duration: 1 }} className="h-6 bg-gradient-to-r from-[#00A9CE] via-[#FF00A0] to-[#FFBF00]" />
-            </AnimatePresence>
-          </div>
-
-          <p className="text-lg font-medium">Raised: ${raised.toLocaleString()} / ${goal.toLocaleString()}</p>
-
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your rosaliens.com email" className="w-full border-2 border-gray-300 rounded-xl px-4 py-2" />
-
-          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Enter amount" className="w-full border-2 border-gray-300 rounded-xl px-4 py-2 mt-2" />
-
-          <Button onClick={handleDonate} className="bg-[#00A9CE] hover:bg-[#008C9E] text-white rounded-2xl px-6 py-3 text-lg shadow-lg w-full">Donate</Button>
-
-          <Button onClick={() => setShowSettings(true)} className="mt-4 bg-gray-700 hover:bg-gray-900 text-white rounded-2xl px-4 py-2 shadow">Settings</Button>
-
-          {showSettings && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <Card className="p-6 max-w-md w-full">
-                <CardContent className="space-y-4">
-                  <h2 className="text-2xl font-bold">Settings</h2>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" className="w-full border-2 border-gray-300 rounded-xl px-4 py-2" />
-                  <input type="number" value={settingsGoal} onChange={(e) => setSettingsGoal(Number(e.target.value))} placeholder="Donation Goal" className="w-full border-2 border-gray-300 rounded-xl px-4 py-2" />
-                  <input type="number" value={settingsRaised} onChange={(e) => setSettingsRaised(Number(e.target.value))} placeholder="Amount Raised" className="w-full border-2 border-gray-300 rounded-xl px-4 py-2" />
-                  <div className="flex justify-end gap-2 mt-2">
-                    <Button onClick={() => setShowSettings(false)} className="bg-gray-500 hover:bg-gray-700 text-white rounded-xl px-4 py-2">Cancel</Button>
-                    <Button onClick={handleSettingsSave} className="bg-green-600 hover:bg-green-800 text-white rounded-xl px-4 py-2">Save</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          <div className="mt-8 text-left">
-            <h2 className="text-xl font-semibold mb-3 text-[#FF00A0]">Recent Donors</h2>
-            {donors.length === 0 ? (
-              <p className="text-gray-600">No donations yet. Be the first!</p>
-            ) : (
-              <ul className="space-y-2">
-                {donors.map((donor, i) => (
-                  <li key={i} className="text-gray-700">{donor.email} — ${donor.amount}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <div class="flex flex-wrap justify-center gap-3 mt-4">
+      <button onclick="setAmount(10)" class="bg-pink-600 hover:bg-pink-700 text-white rounded-2xl px-5 py-3 shadow-lg font-semibold">$10</button>
+      <button onclick="setAmount(25)" class="bg-pink-600 hover:bg-pink-700 text-white rounded-2xl px-5 py-3 shadow-lg font-semibold">$25</button>
+      <button onclick="setAmount(50)" class="bg-pink-600 hover:bg-pink-700 text-white rounded-2xl px-5 py-3 shadow-lg font-semibold">$50</button>
+      <button onclick="setAmount(100)" class="bg-pink-600 hover:bg-pink-700 text-white rounded-2xl px-5 py-3 shadow-lg font-semibold">$100</button>
     </div>
-  );
-}
+
+    <div class="w-full bg-gray-300 rounded-full h-8 overflow-hidden mt-6 shadow-inner">
+      <div id="progress-bar" class="h-8 bg-gradient-to-r from-blue-400 via-pink-500 to-yellow-400 rounded-full" style="width:0%"></div>
+    </div>
+
+    <p class="text-lg font-semibold" id="raised-text">Raised: $0 / $5000</p>
+
+    <input type="email" id="email" placeholder="Enter your rosaliens.com email" class="w-full border-2 border-gray-400 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-600" />
+    <input type="number" id="amount" placeholder="Enter amount" class="w-full border-2 border-gray-400 rounded-2xl px-4 py-3 mt-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+
+    <button onclick="handleDonate()" class="bg-blue-400 hover:bg-blue-600 text-white rounded-3xl px-8 py-4 text-xl shadow-xl w-full font-bold mt-4">Donate</button>
+
+    <button onclick="toggleSettings()" class="mt-5 bg-gray-800 hover:bg-gray-900 text-white rounded-3xl px-6 py-3 shadow-md font-semibold">Settings</button>
+
+    <div id="settings" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
+      <div class="p-6 max-w-md w-full shadow-2xl rounded-2xl bg-white">
+        <h2 class="text-2xl font-bold text-pink-600 mb-3">Settings</h2>
+        <input type="password" id="settings-password" placeholder="Enter password" class="w-full border-2 border-gray-400 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-600 mb-2" />
+        <input type="number" id="settings-goal" placeholder="Donation Goal" class="w-full border-2 border-gray-400 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 mb-2" />
+        <input type="number" id="settings-raised" placeholder="Amount Raised" class="w-full border-2 border-gray-400 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4" />
+        <div class="flex justify-end gap-3">
+          <button onclick="closeSettings()" class="bg-gray-500 hover:bg-gray-700 text-white rounded-xl px-4 py-2">Cancel</button>
+          <button onclick="saveSettings()" class="bg-green-600 hover:bg-green-800 text-white rounded-xl px-4 py-2">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="text-xl font-semibold mb-3 text-pink-600 mt-6">Recent Donors</h2>
+    <ul id="donors-list" class="space-y-2 text-gray-700">
+      <li>No donations yet. Be the first!</li>
+    </ul>
+  </div>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCPDey68EN2kuPEwcIb4x5ldl3hM9ig__w",
+    authDomain: "super-sick-bike-fundraiser.firebaseapp.com",
+    projectId: "super-sick-bike-fundraiser",
+    storageBucket: "super-sick-bike-fundraiser.appspot.com",
+    messagingSenderId: "17825933291",
+    appId: "1:17825933291:web:310e9a43f0a313a15bdbae"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let goal = 5000;
+  let raised = 0;
+
+  function setAmount(value) {
+    document.getElementById('amount').value = value;
+  }
+
+  function updateProgress() {
+    document.getElementById('progress-bar').style.width = (raised / goal * 100) + '%';
+    document.getElementById('raised-text').textContent = `Raised: $${raised} / $${goal}`;
+  }
+
+  function handleDonate() {
+    const email = document.getElementById('email').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const regex = /^[^@]+\.[^@]+@rosaliens\.com$/;
+
+    if (!regex.test(email)) { alert('Invalid email'); return; }
+    if (isNaN(amount) || amount <= 0) { alert('Invalid amount'); return; }
+
+    db.collection('donors').add({ email, amount }).then(() => {
+      raised += amount;
+      updateProgress();
+      addDonorToList(email, amount);
+    }).catch(err => alert('Error saving donation'));
+  }
+
+  function addDonorToList(email, amount) {
+    const ul = document.getElementById('donors-list');
+    const li = document.createElement('li');
+    li.textContent = `${email} - $${amount}`;
+    ul.appendChild(li);
+  }
+
+  function toggleSettings() { document.getElementById('settings').classList.toggle('hidden'); }
+  function closeSettings() { document.getElementById('settings').classList.add('hidden'); }
+  function saveSettings() {
+    const password = document.getElementById('settings-password').value;
+    if (password !== 'InTheShadow') { alert('Wrong password'); return; }
+    goal = parseInt(document.getElementById('settings-goal').value) || goal;
+    raised = parseInt(document.getElementById('settings-raised').value) || raised;
+    updateProgress();
+    closeSettings();
+  }
+</script>
+
+</body>
+</html>
