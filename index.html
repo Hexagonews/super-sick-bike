@@ -4,9 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Super Sick Bike Fundraiser Page</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://i.imgur.com/KwPfJk7.png"/>
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- Tailwind -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-yellow-400 via-pink-500 to-blue-400 flex flex-col items-center justify-center p-6 font-sans">
@@ -49,6 +56,20 @@
     <!-- Donors -->
     <h2 class="text-xl font-semibold mb-3 text-pink-600 mt-6">Recent Donors</h2>
     <ul id="donors-list" class="space-y-2 text-gray-700"></ul>
+
+    <!-- Full History Button -->
+    <button onclick="showHistory()" class="mt-6 bg-pink-500 hover:bg-pink-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg">
+      View Full Donation History
+    </button>
+  </div>
+
+  <!-- History Modal -->
+  <div id="history-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-11/12 max-w-2xl p-6 relative">
+      <button onclick="closeHistory()" class="absolute top-3 right-3 text-gray-500 hover:text-black">✖</button>
+      <h2 class="text-2xl font-bold mb-4 text-pink-600">Donation History</h2>
+      <ul id="history-list" class="space-y-2 text-gray-700 max-h-96 overflow-y-auto"></ul>
+    </div>
   </div>
 
   <script>
@@ -96,6 +117,10 @@
       while (ul.children.length > 10) ul.removeChild(ul.firstChild);
     }
 
+    function formatEmail(email) {
+      return email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "");
+    }
+
     auth.signInAnonymously().then(() => {
       loadDonors();
     }).catch((err) => {
@@ -112,7 +137,7 @@
           const d = doc.data();
           const amt = Number(d.amount) || 0;
           sum += amt;
-          addDonorToList(d.email, amt);
+          addDonorToList(formatEmail(d.email), amt);
         });
         raised = sum;
         updateProgress();
@@ -139,7 +164,7 @@
         });
         raised += amount;
         updateProgress();
-        addDonorToList(email, amount);
+        addDonorToList(formatEmail(email), amount);
         document.getElementById('amount').value = '';
       } catch (err) {
         console.error('Error saving donation:', err);
@@ -147,8 +172,34 @@
       }
     }
 
+    async function showHistory() {
+      clearError();
+      try {
+        const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
+        const ul = document.getElementById('history-list');
+        ul.innerHTML = '';
+        snap.forEach(doc => {
+          const d = doc.data();
+          const li = document.createElement('li');
+          li.textContent = `${formatEmail(d.email)} - $${d.amount}`;
+          ul.appendChild(li);
+        });
+        document.getElementById('history-modal').classList.remove('hidden');
+        document.getElementById('history-modal').classList.add('flex');
+      } catch (err) {
+        console.error('Error loading history:', err);
+        showError(`Error loading history: ${err.message}`);
+      }
+    }
+
+    function closeHistory() {
+      document.getElementById('history-modal').classList.add('hidden');
+      document.getElementById('history-modal').classList.remove('flex');
+    }
+
     window.handleDonate = handleDonate;
+    window.showHistory = showHistory;
+    window.closeHistory = closeHistory;
   </script>
 </body>
 </html>
-
