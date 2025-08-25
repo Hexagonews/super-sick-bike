@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Super Sick Bike Fundraiser Page</title>
+  <title>SpikePrime</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -78,25 +78,12 @@
       const pct = Math.max(0, Math.min(100, (raised / goal) * 100));
       document.getElementById('progress-bar').style.width = pct + '%';
       document.getElementById('raised-text').textContent = `Raised: $${toMoney(raised)} / $${toMoney(goal)}`;
-      updateBadges();
-    }
-
-    function updateBadges() {
-      const badges = document.getElementById('badges');
-      badges.innerHTML = '';
-      if (raised >= 1000) badges.innerHTML += '<span class="px-4 py-2 bg-green-300 rounded-full shadow">🌟 $1k Raised!</span>';
-      if (raised >= 2500) badges.innerHTML += '<span class="px-4 py-2 bg-blue-300 rounded-full shadow">🚀 Halfway There!</span>';
-      if (raised >= 5000) badges.innerHTML += '<span class="px-4 py-2 bg-yellow-300 rounded-full shadow">🏆 Goal Achieved!</span>';
-    }
-
-    function formatNameFromEmail(email) {
-      return email.split('@')[0].replace(/\./g, '');
     }
 
     function addDonorToList(email, amount) {
       const ul = document.getElementById('donors-list');
       const li = document.createElement('li');
-      li.textContent = `${formatNameFromEmail(email)} - $${amount}`;
+      li.textContent = `${email} - $${amount}`;
       ul.appendChild(li);
       while (ul.children.length > 10) ul.removeChild(ul.firstChild);
     }
@@ -114,7 +101,6 @@
       try {
         const snap = await db.collection('donors').orderBy('createdAt', 'desc').limit(10).get();
         let sum = 0;
-        document.getElementById('donors-list').innerHTML = '';
         snap.forEach(doc => {
           const d = doc.data();
           const amt = Number(d.amount) || 0;
