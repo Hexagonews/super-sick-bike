@@ -16,7 +16,7 @@
 
     <h1 class="text-4xl font-extrabold text-pink-600 drop-shadow-lg">Our Mission</h1>
     <p class="text-gray-800 text-lg" id="mission-text">
-      We are on a mission to raise <span class="font-bold" id="goal-amount">$5000</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
+      We are on a mission to raise <span class="font-bold" id="goal-amount">$10,000</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
     </p>
     <p class="text-gray-800 text-lg">
       Our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. The Super Sick Bike is just our prototype for a wider project. Our next step is to get similar bikes around the Metro area.
@@ -31,7 +31,7 @@
       <div id="progress-bar" class="h-8 bg-gradient-to-r from-blue-400 via-pink-500 to-yellow-400 rounded-full" style="width:0%"></div>
     </div>
 
-    <p class="text-lg font-semibold" id="raised-text">Raised: $0 / $5000</p>
+    <p class="text-lg font-semibold" id="raised-text">Raised: $0 / $10,000</p>
 
     <div class="space-y-3 text-left">
       <input type="email" id="email" placeholder="Enter your rosaliens.com email" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-600" />
@@ -64,7 +64,7 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    let goal = 5000;
+    let goal = 10000; // Updated goal
     let raised = 0;
 
     function showError(msg) {
@@ -110,7 +110,6 @@
     async function loadDonors() {
       clearError();
       try {
-        // Query all donations to compute total
         const allSnap = await db.collection('donors').get();
         let sum = 0;
         allSnap.forEach(doc => {
@@ -120,7 +119,6 @@
         raised = sum;
         updateProgress();
 
-        // Query only last 10 for recent donors list
         const snap = await db.collection('donors').orderBy('createdAt', 'desc').limit(10).get();
         document.getElementById('donors-list').innerHTML = '';
         snap.forEach(doc => {
@@ -142,7 +140,7 @@
       if (isNaN(amount) || amount <= 0) { alert('Invalid amount'); return; }
       if (amount > 100) { alert('Maximum donation is $100'); return; }
 
-      amount = parseFloat(amount.toFixed(2)); // force 2 decimals
+      amount = parseFloat(amount.toFixed(2));
 
       try {
         await db.collection('donors').add({
@@ -181,8 +179,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
