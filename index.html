@@ -15,8 +15,8 @@
     <img src="https://i.imgur.com/clsLfk1.png" alt="SpikePrime Logo" class="mx-auto mb-4 object-contain max-h-52" />
 
     <h1 class="text-4xl font-extrabold text-pink-600 drop-shadow-lg">Our Mission</h1>
-    <p class="text-gray-800 text-lg" id="mission-text">
-      We are on a mission to raise <span class="font-bold" id="goal-amount">$5000</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
+    <p class="text-gray-800 text-lg">
+      We are on a mission to raise <span class="font-bold" id="goal-amount">$10,500</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
     </p>
     <p class="text-gray-800 text-lg">
       Our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. The Super Sick Bike is just our prototype for a wider project. Our next step is to get similar bikes around the Metro area.
@@ -31,11 +31,11 @@
       <div id="progress-bar" class="h-8 bg-gradient-to-r from-blue-400 via-pink-500 to-yellow-400 rounded-full" style="width:0%"></div>
     </div>
 
-    <p class="text-lg font-semibold" id="raised-text">Raised: $0 / $5000</p>
+    <p class="text-lg font-semibold" id="raised-text">Raised: $0 / $10,500</p>
 
     <div class="space-y-3 text-left">
       <input type="email" id="email" placeholder="Enter your rosaliens.com email" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-600" />
-      <input type="number" id="amount" placeholder="Enter amount (max $100)" step="0.01" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      <input type="number" id="amount" step="0.01" placeholder="Enter amount (max $100)" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
       <button onclick="handleDonate()" class="bg-blue-400 hover:bg-blue-600 text-white rounded-3xl px-8 py-4 text-xl shadow-xl w-full font-bold">Donate</button>
     </div>
 
@@ -44,10 +44,10 @@
     <h2 class="text-xl font-semibold mb-3 text-pink-600 mt-6">Recent Donors</h2>
     <ul id="donors-list" class="space-y-2 text-gray-700"></ul>
 
-    <button onclick="viewHistory()" class="mt-6 bg-pink-500 hover:bg-pink-700 text-white rounded-2xl px-6 py-3 text-lg shadow-lg">View Full Donation History</button>
+    <button onclick="showFullHistory()" class="mt-4 px-6 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 font-bold shadow-md">View Full History</button>
+    <ul id="full-history" class="hidden mt-4 space-y-2 text-gray-700 text-sm"></ul>
 
-    <!-- Disclaimer -->
-    <p class="text-xs text-gray-500 mt-6 italic">This is a demo project. Donations are not real money.</p>
+    <p class="mt-6 text-xs text-gray-500">This is a demo fundraiser page. Donations are not real money.</p>
   </div>
 
   <script>
@@ -64,8 +64,9 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    let goal = 5000;
+    let goal = 10500;
     let raised = 0;
+    let donationLimit = 100;
 
     function showError(msg) {
       const box = document.getElementById('error-box');
@@ -77,13 +78,13 @@
       box.textContent = '';
       box.classList.add('hidden');
     }
-
     function toMoney(n) { return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
     function updateProgress() {
       const pct = Math.max(0, Math.min(100, (raised / goal) * 100));
       document.getElementById('progress-bar').style.width = pct + '%';
       document.getElementById('raised-text').textContent = `Raised: $${toMoney(raised)} / $${toMoney(goal)}`;
+      document.getElementById('goal-amount').textContent = `$${toMoney(goal)}`;
     }
 
     function formatNameFromEmail(email) {
@@ -95,37 +96,41 @@
       const ul = document.getElementById('donors-list');
       const li = document.createElement('li');
       li.textContent = `${formatNameFromEmail(email)} - $${toMoney(amount)}`;
-      ul.appendChild(li);
-      while (ul.children.length > 10) ul.removeChild(ul.firstChild);
+      ul.insertBefore(li, ul.firstChild);
+      while (ul.children.length > 10) ul.removeChild(ul.lastChild);
     }
 
     auth.signInAnonymously().then(() => {
       console.log('Signed in anonymously');
+      loadSettings();
       loadDonors();
     }).catch((err) => {
       console.error('Anonymous auth failed:', err);
       showError('Anonymous sign-in failed. Enable Anonymous Auth in Firebase Console.');
     });
 
+    async function loadSettings() {
+      try {
+        const doc = await db.collection('config').doc('settings').get();
+        if (doc.exists) {
+          const data = doc.data();
+          goal = data.goal || goal;
+          raised = data.raised || raised;
+          donationLimit = data.limit || donationLimit;
+          updateProgress();
+        }
+      } catch (err) {
+        console.error('Error loading settings:', err);
+      }
+    }
+
     async function loadDonors() {
       clearError();
       try {
-        // Query all donations to compute total
-        const allSnap = await db.collection('donors').get();
-        let sum = 0;
-        allSnap.forEach(doc => {
-          const d = doc.data();
-          sum += Number(d.amount) || 0;
-        });
-        raised = sum;
-        updateProgress();
-
-        // Query only last 10 for recent donors list
         const snap = await db.collection('donors').orderBy('createdAt', 'desc').limit(10).get();
-        document.getElementById('donors-list').innerHTML = '';
         snap.forEach(doc => {
           const d = doc.data();
-          addDonorToList(d.email, d.amount);
+          addDonorToList(d.email, Number(d.amount));
         });
       } catch (err) {
         console.error('Error loading donations:', err);
@@ -137,12 +142,12 @@
       clearError();
       const email = document.getElementById('email').value.trim();
       let amount = parseFloat(document.getElementById('amount').value);
+      amount = Math.round(amount * 100) / 100;
+
       const regex = /^[^@]+@rosaliens\.com$/;
       if (!regex.test(email)) { alert('Invalid email. Use your @rosaliens.com address'); return; }
       if (isNaN(amount) || amount <= 0) { alert('Invalid amount'); return; }
-      if (amount > 100) { alert('Maximum donation is $100'); return; }
-
-      amount = parseFloat(amount.toFixed(2)); // force 2 decimals
+      if (amount > donationLimit) { alert(`Maximum donation is $${donationLimit}`); return; }
 
       try {
         await db.collection('donors').add({
@@ -150,6 +155,11 @@
           amount,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+
+        await db.collection('config').doc('settings').update({
+          raised: firebase.firestore.FieldValue.increment(amount)
+        });
+
         raised += amount;
         updateProgress();
         addDonorToList(email, amount);
@@ -160,26 +170,25 @@
       }
     }
 
-    async function viewHistory() {
-      clearError();
+    async function showFullHistory() {
+      const ul = document.getElementById('full-history');
+      ul.innerHTML = '';
       try {
         const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
-        let history = 'Full Donation History:\n\n';
         snap.forEach(doc => {
           const d = doc.data();
-          history += `${formatNameFromEmail(d.email)} - $${toMoney(d.amount)}\n`;
+          const li = document.createElement('li');
+          li.textContent = `${formatNameFromEmail(d.email)} - $${toMoney(d.amount)}`;
+          ul.appendChild(li);
         });
-        alert(history);
+        ul.classList.toggle('hidden');
       } catch (err) {
         console.error('Error loading full history:', err);
-        showError(`Error loading full history: ${err.message}`);
       }
     }
 
     window.handleDonate = handleDonate;
-    window.viewHistory = viewHistory;
+    window.showFullHistory = showFullHistory;
   </script>
 </body>
 </html>
-
-
