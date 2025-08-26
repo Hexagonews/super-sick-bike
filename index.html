@@ -44,7 +44,9 @@
     <h2 class="text-xl font-semibold mb-3 text-pink-600 mt-6">Recent Donors</h2>
     <ul id="donors-list" class="space-y-2 text-gray-700"></ul>
 
-    <button onclick="showFullHistory()" class="mt-4 px-6 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 font-bold shadow-md">View Full History</button>
+    <button id="toggle-history" onclick="toggleFullHistory()" class="mt-4 px-6 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 font-bold shadow-md">
+      View Full History
+    </button>
     <ul id="full-history" class="hidden mt-4 space-y-2 text-gray-700 text-sm"></ul>
 
     <p class="mt-6 text-xs text-gray-500">This is a demo fundraiser page. Donations are not real money.</p>
@@ -174,25 +176,18 @@
       }
     }
 
-    async function showFullHistory() {
+    async function toggleFullHistory() {
       const ul = document.getElementById('full-history');
+      if (!ul.classList.contains('hidden')) {
+        ul.classList.add('hidden');
+        document.getElementById('toggle-history').textContent = 'View Full History';
+        return;
+      }
+
       ul.innerHTML = '';
       try {
         const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
         snap.forEach(doc => {
           const d = doc.data();
           const li = document.createElement('li');
-          li.textContent = `${formatNameFromEmail(d.email)} - $${toMoney(d.amount)}`;
-          ul.appendChild(li);
-        });
-        ul.classList.toggle('hidden');
-      } catch (err) {
-        console.error('Error loading full history:', err);
-      }
-    }
-
-    window.handleDonate = handleDonate;
-    window.showFullHistory = showFullHistory;
-  </script>
-</body>
-</html>
+          li.textContent =
