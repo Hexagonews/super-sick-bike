@@ -100,29 +100,33 @@
       while (ul.children.length > 10) ul.removeChild(ul.lastChild);
     }
 
+    async function ensureGoal() {
+      const settingsRef = db.collection('config').doc('settings');
+      const docSnap = await settingsRef.get();
+      if (!docSnap.exists || !docSnap.data().goal || docSnap.data().goal !== 10500) {
+        await settingsRef.set({
+          goal: 10500,
+          raised: docSnap.exists ? docSnap.data().raised || 0 : 0,
+          limit: 100
+        }, { merge: true });
+        goal = 10500;
+        updateProgress();
+      } else {
+        goal = docSnap.data().goal;
+        raised = docSnap.data().raised || 0;
+        donationLimit = docSnap.data().limit || 100;
+        updateProgress();
+      }
+    }
+
     auth.signInAnonymously().then(() => {
       console.log('Signed in anonymously');
-      loadSettings();
+      ensureGoal();
       loadDonors();
     }).catch((err) => {
       console.error('Anonymous auth failed:', err);
       showError('Anonymous sign-in failed. Enable Anonymous Auth in Firebase Console.');
     });
-
-    async function loadSettings() {
-      try {
-        const doc = await db.collection('config').doc('settings').get();
-        if (doc.exists) {
-          const data = doc.data();
-          goal = data.goal || goal;
-          raised = data.raised || raised;
-          donationLimit = data.limit || donationLimit;
-          updateProgress();
-        }
-      } catch (err) {
-        console.error('Error loading settings:', err);
-      }
-    }
 
     async function loadDonors() {
       clearError();
@@ -192,4 +196,3 @@
   </script>
 </body>
 </html>
-
