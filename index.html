@@ -55,7 +55,10 @@
       <input type="number" id="settings-raised" class="w-full border-2 border-gray-300 rounded-xl px-3 py-2 mb-3" />
       <label class="block mb-2">Max Donation Per Person ($):</label>
       <input type="number" id="settings-limit" class="w-full border-2 border-gray-300 rounded-xl px-3 py-2 mb-3" />
-      <button onclick="saveSettings()" class="bg-green-500 hover:bg-green-700 text-white rounded-xl px-6 py-2">Save</button>
+      <div class="flex gap-4 mt-3">
+        <button onclick="saveSettings()" class="bg-green-500 hover:bg-green-700 text-white rounded-xl px-6 py-2">Save</button>
+        <button onclick="closeSettings()" class="bg-red-500 hover:bg-red-700 text-white rounded-xl px-6 py-2">Close</button>
+      </div>
     </div>
 
     <!-- Unlock Settings -->
@@ -148,73 +151,4 @@
       if (isNaN(amount) || amount <= 0) { alert('Invalid amount'); return; }
       if (amount > donationLimit) { alert(`Maximum donation is $${donationLimit}`); return; }
 
-      amount = parseFloat(amount.toFixed(2));
-
-      try {
-        await db.collection('donors').add({
-          email,
-          amount,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        raised += amount;
-        updateProgress();
-        addDonorToList(email, amount);
-        document.getElementById('amount').value = '';
-      } catch (err) { showError(`Error saving donation: ${err.message}`); }
-    }
-
-    async function viewHistory() {
-      try {
-        const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
-        let history = 'Full Donation History:\n\n';
-        snap.forEach(doc => {
-          const d = doc.data();
-          history += `${formatNameFromEmail(d.email)} - $${toMoney(d.amount)}\n`;
-        });
-        alert(history);
-      } catch (err) { showError(`Error loading history: ${err.message}`); }
-    }
-
-    // ---- SETTINGS ----
-    function unlockSettings() {
-      const pw = prompt("Enter settings password:");
-      if (pw === "InTheShadow") {
-        document.getElementById("settings-section").classList.remove("hidden");
-        loadSettings();
-      } else {
-        alert("Incorrect password");
-      }
-    }
-
-    async function loadSettings() {
-      try {
-        const doc = await db.collection('config').doc('settings').get();
-        if (doc.exists) {
-          const data = doc.data();
-          goal = data.goal || goal;
-          raised = data.raised || raised;
-          donationLimit = data.limit || donationLimit;
-          document.getElementById("settings-goal").value = goal;
-          document.getElementById("settings-raised").value = raised;
-          document.getElementById("settings-limit").value = donationLimit;
-          updateProgress();
-        }
-      } catch (err) { console.error("Error loading settings:", err); }
-    }
-
-    async function saveSettings() {
-      goal = parseFloat(document.getElementById("settings-goal").value) || goal;
-      raised = parseFloat(document.getElementById("settings-raised").value) || raised;
-      donationLimit = parseFloat(document.getElementById("settings-limit").value) || donationLimit;
-      await db.collection('config').doc('settings').set({ goal, raised, limit: donationLimit });
-      updateProgress();
-      alert("Settings saved!");
-    }
-
-    window.handleDonate = handleDonate;
-    window.viewHistory = viewHistory;
-    window.unlockSettings = unlockSettings;
-    window.saveSettings = saveSettings;
-  </script>
-</body>
-</html>
+      amount = parseFloat(amount.toFixed
