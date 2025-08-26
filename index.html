@@ -1,30 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super Sick Bike Fundraiser Page</title>
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="https://i.imgur.com/ULu65xW.png"/>
-
-  <!-- Firebase -->
+  <link rel="icon" type="image/png" href="https://i.imgur.com/KwPfJk7.png">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <!-- Tailwind -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
 <body class="min-h-screen bg-gradient-to-b from-yellow-400 via-pink-500 to-blue-400 flex flex-col items-center justify-center p-6 font-sans">
   <div class="w-full max-w-3xl shadow-2xl rounded-3xl border-4 border-yellow-400 bg-white p-10 text-center space-y-6">
-    
-    <!-- Logo -->
-    <img src="https://i.imgur.com/clsLfk1.png" alt="SpikePrime Logo" class="mx-auto mb-4 object-contain max-h-52"/>
+    <img src="https://i.imgur.com/clsLfk1.png" alt="SpikePrime Logo" class="mx-auto mb-4 object-contain max-h-52" />
 
-    <!-- Mission -->
     <h1 class="text-4xl font-extrabold text-pink-600 drop-shadow-lg">Our Mission</h1>
-    <p class="text-gray-800 text-lg">
+    <p class="text-gray-800 text-lg" id="mission-text">
       We are on a mission to raise <span class="font-bold" id="goal-amount">$5000</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
     </p>
     <p class="text-gray-800 text-lg">
@@ -34,46 +25,32 @@
       Eventually, we want to make private transportation available across the country. We will have the bikes stationed around Australia, so you can just hop on and get to your destination easily, without having to pay.
     </p>
 
-    <!-- Badges -->
     <div id="badges" class="flex justify-center gap-4 mt-1 flex-wrap"></div>
 
-    <!-- Progress bar -->
     <div class="w-full bg-gray-300 rounded-full h-8 overflow-hidden mt-4 shadow-inner">
       <div id="progress-bar" class="h-8 bg-gradient-to-r from-blue-400 via-pink-500 to-yellow-400 rounded-full" style="width:0%"></div>
     </div>
+
     <p class="text-lg font-semibold" id="raised-text">Raised: $0 / $5000</p>
 
-    <!-- Donation form -->
     <div class="space-y-3 text-left">
-      <input type="email" id="email" placeholder="Enter your rosaliens.com email" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-600"/>
-      <input type="number" id="amount" placeholder="Enter amount (max $100)" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+      <input type="email" id="email" placeholder="Enter your rosaliens.com email" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-600" />
+      <input type="number" id="amount" placeholder="Enter amount (max $100)" step="0.01" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400" />
       <button onclick="handleDonate()" class="bg-blue-400 hover:bg-blue-600 text-white rounded-3xl px-8 py-4 text-xl shadow-xl w-full font-bold">Donate</button>
     </div>
 
-    <!-- Error messages -->
     <div id="error-box" class="hidden mt-2 p-3 rounded-xl bg-red-50 text-left border border-red-200 text-red-700 text-sm"></div>
 
-    <!-- Donors -->
     <h2 class="text-xl font-semibold mb-3 text-pink-600 mt-6">Recent Donors</h2>
     <ul id="donors-list" class="space-y-2 text-gray-700"></ul>
 
-    <!-- Full History Button -->
-    <button onclick="showHistory()" class="mt-6 bg-pink-500 hover:bg-pink-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg">
-      View Full Donation History
-    </button>
-  </div>
+    <button onclick="viewHistory()" class="mt-6 bg-pink-500 hover:bg-pink-700 text-white rounded-2xl px-6 py-3 text-lg shadow-lg">View Full Donation History</button>
 
-  <!-- History Modal -->
-  <div id="history-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-2xl shadow-2xl w-11/12 max-w-2xl p-6 relative">
-      <button onclick="closeHistory()" class="absolute top-3 right-3 text-gray-500 hover:text-black">✖</button>
-      <h2 class="text-2xl font-bold mb-4 text-pink-600">Donation History</h2>
-      <ul id="history-list" class="space-y-2 text-gray-700 max-h-96 overflow-y-auto"></ul>
-    </div>
+    <!-- Disclaimer -->
+    <p class="text-xs text-gray-500 mt-6 italic">This is a demo project. Donations are not real money.</p>
   </div>
 
   <script>
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCPDey68EN2kuPEwcIb4x5ldl3hM9ig__w",
       authDomain: "super-sick-bike-fundraiser.firebaseapp.com",
@@ -101,7 +78,7 @@
       box.classList.add('hidden');
     }
 
-    function toMoney(n) { return Number(n).toLocaleString(); }
+    function toMoney(n) { return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
     function updateProgress() {
       const pct = Math.max(0, Math.min(100, (raised / goal) * 100));
@@ -109,38 +86,47 @@
       document.getElementById('raised-text').textContent = `Raised: $${toMoney(raised)} / $${toMoney(goal)}`;
     }
 
+    function formatNameFromEmail(email) {
+      const namePart = email.split('@')[0];
+      return namePart.replace(/\./g, ' ');
+    }
+
     function addDonorToList(email, amount) {
       const ul = document.getElementById('donors-list');
       const li = document.createElement('li');
-      li.textContent = `${email} - $${amount}`;
+      li.textContent = `${formatNameFromEmail(email)} - $${toMoney(amount)}`;
       ul.appendChild(li);
       while (ul.children.length > 10) ul.removeChild(ul.firstChild);
     }
 
-    function formatEmail(email) {
-      return email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "");
-    }
-
     auth.signInAnonymously().then(() => {
+      console.log('Signed in anonymously');
       loadDonors();
     }).catch((err) => {
+      console.error('Anonymous auth failed:', err);
       showError('Anonymous sign-in failed. Enable Anonymous Auth in Firebase Console.');
-      console.error(err);
     });
 
     async function loadDonors() {
       clearError();
       try {
-        const snap = await db.collection('donors').orderBy('createdAt', 'desc').limit(10).get();
+        // Query all donations to compute total
+        const allSnap = await db.collection('donors').get();
         let sum = 0;
-        snap.forEach(doc => {
+        allSnap.forEach(doc => {
           const d = doc.data();
-          const amt = Number(d.amount) || 0;
-          sum += amt;
-          addDonorToList(formatEmail(d.email), amt);
+          sum += Number(d.amount) || 0;
         });
         raised = sum;
         updateProgress();
+
+        // Query only last 10 for recent donors list
+        const snap = await db.collection('donors').orderBy('createdAt', 'desc').limit(10).get();
+        document.getElementById('donors-list').innerHTML = '';
+        snap.forEach(doc => {
+          const d = doc.data();
+          addDonorToList(d.email, d.amount);
+        });
       } catch (err) {
         console.error('Error loading donations:', err);
         showError(`Error loading donations: ${err.message}`);
@@ -150,11 +136,13 @@
     async function handleDonate() {
       clearError();
       const email = document.getElementById('email').value.trim();
-      const amount = parseFloat(document.getElementById('amount').value);
+      let amount = parseFloat(document.getElementById('amount').value);
       const regex = /^[^@]+@rosaliens\.com$/;
       if (!regex.test(email)) { alert('Invalid email. Use your @rosaliens.com address'); return; }
       if (isNaN(amount) || amount <= 0) { alert('Invalid amount'); return; }
       if (amount > 100) { alert('Maximum donation is $100'); return; }
+
+      amount = parseFloat(amount.toFixed(2)); // force 2 decimals
 
       try {
         await db.collection('donors').add({
@@ -164,7 +152,7 @@
         });
         raised += amount;
         updateProgress();
-        addDonorToList(formatEmail(email), amount);
+        addDonorToList(email, amount);
         document.getElementById('amount').value = '';
       } catch (err) {
         console.error('Error saving donation:', err);
@@ -172,34 +160,24 @@
       }
     }
 
-    async function showHistory() {
+    async function viewHistory() {
       clearError();
       try {
         const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
-        const ul = document.getElementById('history-list');
-        ul.innerHTML = '';
+        let history = 'Full Donation History:\n\n';
         snap.forEach(doc => {
           const d = doc.data();
-          const li = document.createElement('li');
-          li.textContent = `${formatEmail(d.email)} - $${d.amount}`;
-          ul.appendChild(li);
+          history += `${formatNameFromEmail(d.email)} - $${toMoney(d.amount)}\n`;
         });
-        document.getElementById('history-modal').classList.remove('hidden');
-        document.getElementById('history-modal').classList.add('flex');
+        alert(history);
       } catch (err) {
-        console.error('Error loading history:', err);
-        showError(`Error loading history: ${err.message}`);
+        console.error('Error loading full history:', err);
+        showError(`Error loading full history: ${err.message}`);
       }
     }
 
-    function closeHistory() {
-      document.getElementById('history-modal').classList.add('hidden');
-      document.getElementById('history-modal').classList.remove('flex');
-    }
-
     window.handleDonate = handleDonate;
-    window.showHistory = showHistory;
-    window.closeHistory = closeHistory;
+    window.viewHistory = viewHistory;
   </script>
 </body>
 </html>
