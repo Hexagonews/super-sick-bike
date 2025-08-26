@@ -15,8 +15,8 @@
     <img src="https://i.imgur.com/clsLfk1.png" alt="SpikePrime Logo" class="mx-auto mb-4 object-contain max-h-52" />
 
     <h1 class="text-4xl font-extrabold text-pink-600 drop-shadow-lg">Our Mission</h1>
-    <p class="text-gray-800 text-lg" id="mission-text">
-      We are on a mission to raise <span class="font-bold" id="goal-amount">$10,000</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
+    <p class="text-gray-800 text-lg">
+      We are on a mission to raise <span class="font-bold" id="goal-amount"></span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
     </p>
     <p class="text-gray-800 text-lg">
       Our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. The Super Sick Bike is just our prototype for a wider project. Our next step is to get similar bikes around the Metro area.
@@ -31,7 +31,7 @@
       <div id="progress-bar" class="h-8 bg-gradient-to-r from-blue-400 via-pink-500 to-yellow-400 rounded-full" style="width:0%"></div>
     </div>
 
-    <p class="text-lg font-semibold" id="raised-text">Raised: $0 / $10,000</p>
+    <p class="text-lg font-semibold" id="raised-text"></p>
 
     <div class="space-y-3 text-left">
       <input type="email" id="email" placeholder="Enter your rosaliens.com email" class="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-600" />
@@ -41,10 +41,13 @@
 
     <div id="error-box" class="hidden mt-2 p-3 rounded-xl bg-red-50 text-left border border-red-200 text-red-700 text-sm"></div>
 
+    <!-- Recent Donors -->
     <h2 class="text-xl font-semibold mb-3 text-pink-600 mt-6">Recent Donors</h2>
     <ul id="donors-list" class="space-y-2 text-gray-700"></ul>
 
-    <button onclick="viewHistory()" class="mt-6 bg-pink-500 hover:bg-pink-700 text-white rounded-2xl px-6 py-3 text-lg shadow-lg">View Full Donation History</button>
+    <!-- Full History -->
+    <h2 class="text-xl font-semibold mb-3 text-blue-600 mt-6">Full Donation History</h2>
+    <div id="history-list" class="max-h-64 overflow-y-auto border rounded-xl p-4 bg-gray-50 text-left text-gray-700"></div>
 
     <!-- Disclaimer -->
     <p class="text-xs text-gray-500 mt-6 italic">This is a demo project. Donations are not real money.</p>
@@ -64,7 +67,7 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    let goal = 10000; // Updated goal
+    let goal = 10000; // Single source of truth
     let raised = 0;
 
     function showError(msg) {
@@ -78,11 +81,14 @@
       box.classList.add('hidden');
     }
 
-    function toMoney(n) { return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function toMoney(n) { 
+      return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); 
+    }
 
     function updateProgress() {
       const pct = Math.max(0, Math.min(100, (raised / goal) * 100));
       document.getElementById('progress-bar').style.width = pct + '%';
+      document.getElementById('goal-amount').textContent = `$${toMoney(goal)}`;
       document.getElementById('raised-text').textContent = `Raised: $${toMoney(raised)} / $${toMoney(goal)}`;
     }
 
@@ -99,9 +105,17 @@
       while (ul.children.length > 10) ul.removeChild(ul.firstChild);
     }
 
+    function addToHistory(email, amount) {
+      const historyDiv = document.getElementById('history-list');
+      const entry = document.createElement('div');
+      entry.textContent = `${formatNameFromEmail(email)} - $${toMoney(amount)}`;
+      historyDiv.appendChild(entry);
+    }
+
     auth.signInAnonymously().then(() => {
       console.log('Signed in anonymously');
       loadDonors();
+      loadHistory();
     }).catch((err) => {
       console.error('Anonymous auth failed:', err);
       showError('Anonymous sign-in failed. Enable Anonymous Auth in Firebase Console.');
@@ -131,6 +145,22 @@
       }
     }
 
+    async function loadHistory() {
+      clearError();
+      try {
+        const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
+        const historyDiv = document.getElementById('history-list');
+        historyDiv.innerHTML = '';
+        snap.forEach(doc => {
+          const d = doc.data();
+          addToHistory(d.email, d.amount);
+        });
+      } catch (err) {
+        console.error('Error loading full history:', err);
+        showError(`Error loading full history: ${err.message}`);
+      }
+    }
+
     async function handleDonate() {
       clearError();
       const email = document.getElementById('email').value.trim();
@@ -151,6 +181,7 @@
         raised += amount;
         updateProgress();
         addDonorToList(email, amount);
+        addToHistory(email, amount);
         document.getElementById('amount').value = '';
       } catch (err) {
         console.error('Error saving donation:', err);
@@ -158,24 +189,7 @@
       }
     }
 
-    async function viewHistory() {
-      clearError();
-      try {
-        const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
-        let history = 'Full Donation History:\n\n';
-        snap.forEach(doc => {
-          const d = doc.data();
-          history += `${formatNameFromEmail(d.email)} - $${toMoney(d.amount)}\n`;
-        });
-        alert(history);
-      } catch (err) {
-        console.error('Error loading full history:', err);
-        showError(`Error loading full history: ${err.message}`);
-      }
-    }
-
     window.handleDonate = handleDonate;
-    window.viewHistory = viewHistory;
   </script>
 </body>
 </html>
