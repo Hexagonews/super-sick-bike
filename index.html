@@ -56,4 +56,135 @@
     const firebaseConfig = {
       apiKey: "AIzaSyCPDey68EN2kuPEwcIb4x5ldl3hM9ig__w",
       authDomain: "super-sick-bike-fundraiser.firebaseapp.com",
-      projectId: "super-si
+      projectId: "super-sick-bike-fundraiser",
+      storageBucket: "super-sick-bike-fundraiser.appspot.com",
+      messagingSenderId: "17825933291",
+      appId: "1:17825933291:web:310e9a43f0a313a15bdbae"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let goal = 10500;
+    let raised = 5560.77; // Current donated amount
+    let donationLimit = 100;
+
+    function showError(msg) {
+      const box = document.getElementById('error-box');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+    }
+
+    function clearError() {
+      const box = document.getElementById('error-box');
+      box.textContent = '';
+      box.classList.add('hidden');
+    }
+
+    function toMoney(n) {
+      return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function updateProgress() {
+      const pct = Math.max(0, Math.min(100, (raised / goal) * 100));
+      document.getElementById('progress-bar').style.width = pct + '%';
+      document.getElementById('raised-text').textContent = `Raised: $${toMoney(raised)} / $${toMoney(goal)}`;
+      document.getElementById('goal-amount').textContent = `$${toMoney(goal)}`;
+    }
+
+    function formatNameFromEmail(email) {
+      if (!email) return "";
+      const namePart = email.split('@')[0].trim();
+      return namePart.split('.').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    function addDonorToList(email, amount) {
+      const ul = document.getElementById('donors-list');
+      const li = document.createElement('li');
+      li.textContent = `${formatNameFromEmail(email)} - $${toMoney(amount)}`;
+      ul.insertBefore(li, ul.firstChild);
+      while (ul.children.length > 10) ul.removeChild(ul.lastChild);
+    }
+
+    auth.signInAnonymously().then(() => {
+      console.log('Signed in anonymously');
+      updateProgress();
+      loadDonors();
+    }).catch((err) => {
+      console.error('Anonymous auth failed:', err);
+      showError('Anonymous sign-in failed. Enable Anonymous Auth in Firebase Console.');
+    });
+
+    async function loadDonors() {
+      clearError();
+      try {
+        const snap = await db.collection('donors').orderBy('createdAt', 'desc').limit(10).get();
+        snap.forEach(doc => {
+          const d = doc.data();
+          addDonorToList(d.email, Number(d.amount));
+        });
+      } catch (err) {
+        console.error('Error loading donations:', err);
+        showError(`Error loading donations: ${err.message}`);
+      }
+    }
+
+    async function handleDonate() {
+      clearError();
+      const email = document.getElementById('email').value.trim();
+      let amount = parseFloat(document.getElementById('amount').value);
+      amount = Math.round(amount * 100) / 100;
+
+      const regex = /^[^@]+@rosaliens\.com$/;
+      if (!regex.test(email)) { alert('Invalid email. Use your @rosaliens.com address'); return; }
+      if (isNaN(amount) || amount <= 0) { alert('Invalid amount'); return; }
+      if (amount > donationLimit) { alert(`Maximum donation is $${donationLimit}`); return; }
+
+      try {
+        await db.collection('donors').add({
+          email,
+          amount,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        raised += amount;
+        updateProgress();
+        addDonorToList(email, amount);
+        document.getElementById('amount').value = '';
+      } catch (err) {
+        console.error('Error saving donation:', err);
+        showError(`Error saving donation: ${err.code || ''} ${err.message || err}`);
+      }
+    }
+
+    async function toggleFullHistory() {
+      const ul = document.getElementById('full-history');
+      if (!ul.classList.contains('hidden')) {
+        ul.classList.add('hidden');
+        document.getElementById('toggle-history').textContent = 'View Full History';
+        return;
+      }
+
+      ul.innerHTML = '';
+      try {
+        const snap = await db.collection('donors').orderBy('createdAt', 'desc').get();
+        snap.forEach(doc => {
+          const d = doc.data();
+          const li = document.createElement('li');
+          li.textContent = `${formatNameFromEmail(d.email)} - $${toMoney(d.amount)}`;
+          ul.appendChild(li);
+        });
+        ul.classList.remove('hidden');
+        document.getElementById('toggle-history').textContent = 'Hide Full History';
+      } catch (err) {
+        console.error('Error loading full history:', err);
+      }
+    }
+
+    window.handleDonate = handleDonate;
+    window.toggleFullHistory = toggleFullHistory;
+  </script>
+</body>
+</html>
+
