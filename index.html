@@ -16,13 +16,13 @@
 
     <h1 class="text-4xl font-extrabold text-pink-600 drop-shadow-lg">Our Mission</h1>
     <p class="text-gray-800 text-lg">
-      We are on a mission to raise <span class="font-bold" id="goal-amount">$10,500</span> to support our project. Every contribution brings us closer to achieving our goals, and together we can make an impact.
+      We are on a mission to raise <span class="font-bold" id="goal-amount">$10,500</span> to support our project.
     </p>
     <p class="text-gray-800 text-lg">
-      Our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. The Super Sick Bike is just our prototype for a wider project. Our next step is to get similar bikes around the Metro area.
+      Our mission began at Rosalie Primary School where we created a prototype for the Super Sick Bike. Our next step is to get similar bikes around the Metro area.
     </p>
     <p class="text-gray-800 text-lg">
-      Eventually, we want to make private transportation available across the country. We will have the bikes stationed around Australia, so you can just hop on and get to your destination easily, without having to pay.
+      Eventually, we want to make private transportation available across the country. Bikes will be stationed around Australia for easy access without cost.
     </p>
 
     <div id="badges" class="flex justify-center gap-4 mt-1 flex-wrap"></div>
@@ -67,7 +67,7 @@
     const db = firebase.firestore();
 
     let goal = 10500;
-    let raised = 5560.77; // Current donated amount
+    let raised = 5560.77;
     let donationLimit = 100;
 
     function showError(msg) {
@@ -107,15 +107,6 @@
       while (ul.children.length > 10) ul.removeChild(ul.lastChild);
     }
 
-    auth.signInAnonymously().then(() => {
-      console.log('Signed in anonymously');
-      updateProgress();
-      loadDonors();
-    }).catch((err) => {
-      console.error('Anonymous auth failed:', err);
-      showError('Anonymous sign-in failed. Enable Anonymous Auth in Firebase Console.');
-    });
-
     async function loadDonors() {
       clearError();
       try {
@@ -124,11 +115,20 @@
           const d = doc.data();
           addDonorToList(d.email, Number(d.amount));
         });
+        updateProgress();
       } catch (err) {
         console.error('Error loading donations:', err);
         showError(`Error loading donations: ${err.message}`);
       }
     }
+
+    auth.signInAnonymously().then(() => {
+      console.log('Signed in anonymously');
+      loadDonors();
+    }).catch((err) => {
+      console.error('Anonymous auth failed:', err);
+      showError('Anonymous sign-in failed. Enable Anonymous Auth in Firebase Console.');
+    });
 
     async function handleDonate() {
       clearError();
@@ -147,7 +147,6 @@
           amount,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-
         raised += amount;
         updateProgress();
         addDonorToList(email, amount);
@@ -187,4 +186,5 @@
   </script>
 </body>
 </html>
+
 
